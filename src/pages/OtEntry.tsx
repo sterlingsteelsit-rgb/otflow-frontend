@@ -100,11 +100,12 @@ function startOfWeekMonday(today: Date) {
   d.setHours(0, 0, 0, 0);
   return d;
 }
-function minutesToHuman(min: number) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return `${h}h ${m}m`;
+function minutesToOt(min: number) {
+  const h = Math.round((min / 60) * 100) / 100;
+  const s = String(h).replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
+  return `${s}`;
 }
+
 function sumMinutes(
   r: Pick<OtRow, "normalMinutes" | "doubleMinutes" | "tripleMinutes">,
 ) {
@@ -429,17 +430,19 @@ export function OtEntryPage() {
 
   async function openReject(row: OtRow) {
     if (!has("ot.reject")) return toast.error("No permission to reject");
+
     setActingId(row._id);
-    setRejectReason("");
-    setRejectOpen(true);
+
+    // reset fields
     setRejectReasonId("");
     setRejectReason("");
     setRejectOpen(true);
+
     try {
       const items = await fetchReasons("REJECT");
       setRejectReasons(items);
     } catch {
-      console.error("Failed to load reject reasons");
+      // ignore, still allow manual typing
     }
   }
 
@@ -447,16 +450,16 @@ export function OtEntryPage() {
     if (!actingId) return;
     if (!canReject) return toast.error("No permission to reject");
 
-    const t = toast.loading("Rejecting...");
-
     const selectedLabel =
       rejectReasons.find((x) => x._id === rejectReasonId)?.label ?? "";
 
     const finalReason = (rejectReason.trim() || selectedLabel || "").trim();
+
+    if (!finalReason) return toast.error("Reject reason is required");
+
+    const t = toast.loading("Rejecting...");
     try {
-      await api.patch(`/ot/${actingId}/reject`, {
-        reason: finalReason || undefined,
-      });
+      await api.patch(`/ot/${actingId}/reject`, { reason: finalReason });
       toast.success("Rejected", { id: t });
       setRejectOpen(false);
       setActingId(null);
@@ -732,19 +735,19 @@ export function OtEntryPage() {
                       <div className="text-xs text-gray-600 space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                          <span>N {minutesToHuman(it.normalMinutes)}</span>
+                          <span>N {minutesToOt(it.normalMinutes)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                          <span>D {minutesToHuman(it.doubleMinutes)}</span>
+                          <span>D {minutesToOt(it.doubleMinutes)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                          <span>T {minutesToHuman(it.tripleMinutes)}</span>
+                          <span>T {minutesToOt(it.tripleMinutes)}</span>
                         </div>
                       </div>
                       <div className="mt-1 font-black text-gray-900">
-                        {minutesToHuman(sumMinutes(it))}
+                        {minutesToOt(sumMinutes(it))}
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -758,7 +761,7 @@ export function OtEntryPage() {
                     <td className="px-5 py-4">
                       {it.status === "APPROVED" ? (
                         <div className="font-black text-gray-900">
-                          {minutesToHuman(it.approvedTotalMinutes ?? 0)}
+                          {minutesToOt(it.approvedTotalMinutes ?? 0)}
                         </div>
                       ) : (
                         <div className="text-xs text-gray-500">-</div>
@@ -1073,6 +1076,7 @@ export function OtEntryPage() {
       </Modal>
 
       {/* Reject modal */}
+      {/* Reject modal */}
       <Modal
         open={rejectOpen}
         title="Reject OT"
@@ -1080,19 +1084,30 @@ export function OtEntryPage() {
       >
         <div className="space-y-4">
           <div className="text-sm text-gray-600">
-            Optional: add a reject reason (future use in audit / reports).
+            Select a reason or type a custom reason (required).
           </div>
+
+          <SelectField
+            label="Reason"
+            value={rejectReasonId}
+            onValueChange={setRejectReasonId}
+            options={[
+              { label: "Select reason", value: "" },
+              ...rejectReasons.map((r) => ({ label: r.label, value: r._id })),
+            ]}
+          />
+
           <Input
-            label="Reason (optional)"
+            label="Or type custom reason"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             className="border-gray-300"
           />
+
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
             <Button
               variant="ghost"
               onClick={() => setRejectOpen(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel
