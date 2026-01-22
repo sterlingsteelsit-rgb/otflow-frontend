@@ -160,7 +160,7 @@ export function AppShell() {
     }
 
     // Only check for /ot paths, not /triple-ot or /ot-reason
-    if (path.startsWith("/ot/entry")) {
+    if (path.startsWith("/ot/entry") || path.startsWith("/ot/logs")) {
       setOtOpen(true);
     } else {
       setOtOpen(false);
@@ -267,6 +267,14 @@ export function AppShell() {
                     <Item
                       to="/ot/entry"
                       label="OT Entry"
+                      Icon={Clock}
+                      mode={mode}
+                    />
+                  )}
+                  {has("ot.read") && (
+                    <Item
+                      to="/ot/logs"
+                      label="OT Logs"
                       Icon={Clock}
                       mode={mode}
                     />

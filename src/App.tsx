@@ -14,10 +14,12 @@ import { OtEntryPage } from "./pages/OtEntry";
 import { AuditLogsPage } from "./pages/AuditLogs";
 import { TripleOtConfigPage } from "./pages/TripleOtConfig";
 import { DecisionReasonsPage } from "./pages/DecisionReasonsPage";
+import OtLogsPage from "./pages/OtLogsPage";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
-  if (state.loading) return <Loading variant="spinner" center="screen" text="Loading State.." />;
+  if (state.loading)
+    return <Loading variant="spinner" center="screen" text="Loading State.." />;
   if (!state.user) return <Navigate to="/login" replace />;
   return children;
 }
@@ -41,6 +43,7 @@ export default function App() {
         <Route path="admin/config" element={<AdminConfigPage />} />
         <Route path="employees" element={<EmployeesPage />} />
         <Route path="ot/entry" element={<OtEntryPage />} />
+        <Route path="ot/logs" element={<OtLogsPage />} />
         <Route path="/triple-ot" element={<TripleOtConfigPage />} />
         <Route path="/audit" element={<AuditLogsPage />} />
         <Route path="/ot-reason" element={<DecisionReasonsPage />} />
