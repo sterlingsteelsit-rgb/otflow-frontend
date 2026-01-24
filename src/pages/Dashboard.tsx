@@ -380,33 +380,41 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weekChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  />
-                  <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {canStats && weekChartData.length > 0 && (
+              <div className="h-72 min-h-[18rem] w-full flex items-center justify-center">
+                <div className="w-full">
+                  <ResponsiveContainer width="100%" aspect={2.8}>
+                    <BarChart data={weekChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="day"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#6b7280" }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#6b7280" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          background: "rgba(255, 255, 255, 0.95)",
+                          backdropFilter: "blur(4px)",
+                        }}
+                      />
+                      <Bar
+                        dataKey="total"
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
@@ -424,56 +432,58 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weekChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="normal"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="double"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="triple"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="h-72 w-full flex items-center justify-center">
+              <div className="w-full">
+                <ResponsiveContainer width="100%" aspect={2.8}>
+                  <LineChart data={weekChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="day"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#6b7280" }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#6b7280" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "rgba(255, 255, 255, 0.95)",
+                        backdropFilter: "blur(4px)",
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="normal"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="double"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="triple"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>

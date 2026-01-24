@@ -23,10 +23,11 @@ import {
   BarChart3,
   Pencil,
 } from "lucide-react";
+import StatsModal from "../components/modals/StatsModal";
 
-type EmployeeLite = { _id: string; empId: string; name: string };
+export type EmployeeLite = { _id: string; empId: string; name: string };
 
-type OtRow = {
+export type OtRow = {
   _id: string;
   employeeId: EmployeeLite;
   workDate: string;
@@ -112,6 +113,11 @@ function sumMinutes(
   return r.normalMinutes + r.doubleMinutes + r.tripleMinutes;
 }
 
+function isRowFilled(it: OtRow) {
+  if (it.shift === "NO_SHIFT") return true;
+  return Boolean(it.inTime?.trim() && it.outTime?.trim());
+}
+
 export function OtEntryPage() {
   const { has, state } = useAuth();
 
@@ -177,6 +183,50 @@ export function OtEntryPage() {
   const [editInTime, setEditInTime] = useState("");
   const [editOutTime, setEditOutTime] = useState("");
   const [editReason, setEditReason] = useState("");
+
+  const [weekComplete, setWeekComplete] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!employees.length) return;
+    loadWeekCompleteness();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, weekStart, employees.length]);
+
+  async function loadWeekCompleteness() {
+    const from = toYYYYMMDD(weekDates[0]);
+    const to = toYYYYMMDD(weekDates[6]);
+
+    try {
+      // get all rows for the week (you already use /ot for a day)
+      const r = await api.get("/ot", {
+        params: { from, to, page: 1, limit: 20000 },
+      });
+      const items = (r.data.items ?? []) as OtRow[];
+
+      // group by date -> set of employees with filled rows
+      const filledByDate: Record<string, Set<string>> = {};
+      for (const it of items) {
+        if (!isRowFilled(it)) continue;
+        const d = it.workDate;
+        const empId = it.employeeId?._id;
+        if (!d || !empId) continue;
+        (filledByDate[d] ??= new Set()).add(empId);
+      }
+
+      const map: Record<string, boolean> = {};
+      for (const d of weekDates.map(toYYYYMMDD)) {
+        map[d] =
+          employees.length > 0 &&
+          (filledByDate[d]?.size ?? 0) === employees.length;
+      }
+
+      setWeekComplete(map);
+    } catch {
+      // if it fails, just clear (or keep old)
+      setWeekComplete({});
+    }
+  }
 
   async function loadEmployees() {
     setLoadingEmp(true);
@@ -555,6 +605,7 @@ export function OtEntryPage() {
           const date = toYYYYMMDD(d);
           const isSelected = date === selectedDate;
           const stat = weekStats[date];
+          const dayComplete = !!weekComplete[date];
 
           return (
             <div
@@ -562,8 +613,11 @@ export function OtEntryPage() {
               className={[
                 "rounded-xl border p-4 transition-all duration-200",
                 isSelected
-                  ? "border-brand-blue bg-gradient-to-br from-brand-blue/10 to-blue-100/30 shadow-sm"
-                  : "border-gray-200 bg-white/80 backdrop-blur-sm hover:border-gray-300 hover:shadow-sm",
+                  ? "bg-gradient-to-br from-brand-blue/10 to-blue-100/30 shadow-sm"
+                  : "bg-white/80 backdrop-blur-sm hover:shadow-sm",
+                dayComplete
+                  ? "border-2 border-green-500"
+                  : "border-2 border-red-500",
               ].join(" ")}
             >
               <button className="w-full text-left" onClick={() => pickDate(d)}>
@@ -1184,85 +1238,12 @@ export function OtEntryPage() {
       </Modal>
 
       {/* Stats modal */}
-      <Modal
-        open={statsOpen}
-        title={`Day Stats - ${stats?.date ?? ""}`}
-        onClose={() => setStatsOpen(false)}
-      >
-        <div className="space-y-4">
-          {statsLoading ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Loading stats...
-            </div>
-          ) : stats ? (
-            <>
-              <div className="grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-4 text-sm">
-                <div className="flex items-center gap-2 font-semibold text-gray-700">
-                  <div className="h-2 w-2 rounded-full bg-gray-500"></div>
-                  Total
-                </div>
-                <div className="text-right font-black text-gray-900">
-                  {stats.total}
-                </div>
-                <div className="flex items-center gap-2 font-semibold text-gray-700">
-                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                  Pending
-                </div>
-                <div className="text-right font-black text-gray-900">
-                  {stats.pending}
-                </div>
-                <div className="flex items-center gap-2 font-semibold text-gray-700">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  Approved
-                </div>
-                <div className="text-right font-black text-gray-900">
-                  {stats.approved}
-                </div>
-                <div className="flex items-center gap-2 font-semibold text-gray-700">
-                  <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                  Rejected
-                </div>
-                <div className="text-right font-black text-gray-900">
-                  {stats.rejected}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-4 text-sm">
-                <div className="mb-3 flex items-center gap-2 font-black text-gray-900">
-                  <BarChart3 className="h-4 w-4" />
-                  Hours Summary
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 font-semibold text-gray-700">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    Normal Hours
-                  </div>
-                  <div className="text-right font-black text-gray-900">
-                    {stats.hours.normal}
-                  </div>
-                  <div className="flex items-center gap-2 font-semibold text-gray-700">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    Double Hours
-                  </div>
-                  <div className="text-right font-black text-gray-900">
-                    {stats.hours.double}
-                  </div>
-                  <div className="flex items-center gap-2 font-semibold text-gray-700">
-                    <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                    Triple Hours
-                  </div>
-                  <div className="text-right font-black text-gray-900">
-                    {stats.hours.triple}
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-gray-500">No stats</div>
-          )}
-        </div>
-      </Modal>
+      <StatsModal
+        stats={stats}
+        statsOpen={statsOpen}
+        setStatsOpen={setStatsOpen}
+        statsLoading={statsLoading}
+      />
 
       {/* Audit modal */}
       <Modal

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../utils/cn";
@@ -23,7 +23,7 @@ export function Modal({
   size = "md",
 }: {
   open: boolean;
-  title: string;
+  title: ReactNode;
   onClose: () => void;
   children: React.ReactNode;
   className?: string;

@@ -1,24 +1,29 @@
 import { useMemo, useState, useEffect } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import { cn } from "../../utils/cn";
 import { useAuth } from "../../auth/AuthContext";
 import { Button } from "../ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
-  Users,
-  FileText,
-  Clock,
-  Triangle,
-  HelpCircle,
-  Shield,
   ChevronDown,
-  LogOut,
   UserCircle,
+  Briefcase,
+  Users,
+  UserCheck,
+  Clock,
+  ClipboardEdit,
+  ScrollText,
+  Shield,
+  History,
   Settings,
-  Bell,
+  Repeat,
+  MessageSquareText,
+  Key,
+  LogOut,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { usePendingNotifications } from "../../hooks/usePendingNotifications";
 import { Portal } from "./Portal";
@@ -236,7 +241,7 @@ export function AppShell() {
               {has("users.read") || has("employees.read") ? (
                 <CollapsibleGroup
                   label="Management"
-                  Icon={Users}
+                  Icon={Briefcase}
                   open={managementOpen}
                   onToggle={() => setManagementOpen((o) => !o)}
                   mode={mode}
@@ -248,7 +253,7 @@ export function AppShell() {
                     <Item
                       to="/employees"
                       label="Employees"
-                      Icon={FileText}
+                      Icon={UserCheck}
                       mode={mode}
                     />
                   )}
@@ -267,7 +272,7 @@ export function AppShell() {
                     <Item
                       to="/ot/entry"
                       label="OT Entry"
-                      Icon={Clock}
+                      Icon={ClipboardEdit}
                       mode={mode}
                     />
                   )}
@@ -275,7 +280,7 @@ export function AppShell() {
                     <Item
                       to="/ot/logs"
                       label="OT Logs"
-                      Icon={Clock}
+                      Icon={ScrollText}
                       mode={mode}
                     />
                   )}
@@ -294,7 +299,7 @@ export function AppShell() {
                     <Item
                       to="/audit"
                       label="Audit Logs"
-                      Icon={FileText}
+                      Icon={History}
                       mode={mode}
                     />
                   )}
@@ -336,7 +341,7 @@ export function AppShell() {
                         <Item
                           to="/triple-ot"
                           label="Triple OT"
-                          Icon={Triangle}
+                          Icon={Repeat}
                           mode={mode}
                           onClick={() => setSettingsOpen(false)}
                         />
@@ -345,7 +350,7 @@ export function AppShell() {
                         <Item
                           to="/ot-reason"
                           label="OT Reason"
-                          Icon={HelpCircle}
+                          Icon={MessageSquareText}
                           mode={mode}
                           onClick={() => setSettingsOpen(false)}
                         />
@@ -354,7 +359,7 @@ export function AppShell() {
                         <Item
                           to="/admin/config"
                           label="Role Management"
-                          Icon={Settings}
+                          Icon={Key}
                           mode={mode}
                           onClick={() => setSettingsOpen(false)}
                         />
@@ -558,7 +563,14 @@ export function AppShell() {
                         {items.length > 0 && (
                           <div className="border-t border-gray-200/50 px-4 py-2.5 bg-gradient-to-t from-gray-50 to-white/80">
                             <div className="text-xs text-gray-600 text-center">
-                              Click on any item to review
+                              Check pending entries:{" "}
+                              <Link
+                                to="/ot/entry"
+                                onClick={() => setNotifOpen(false)}
+                                className="text-blue-500"
+                              >
+                                OT Entry
+                              </Link>
                             </div>
                           </div>
                         )}

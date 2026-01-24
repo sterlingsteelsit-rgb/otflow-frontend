@@ -11,7 +11,7 @@ import { UsersPage } from "./pages/Users";
 import { AdminConfigPage } from "./pages/AdminConfig";
 import { EmployeesPage } from "./pages/Employees";
 import { OtEntryPage } from "./pages/OtEntry";
-import { AuditLogsPage } from "./pages/AuditLogs";
+import AuditLogsPage from "./pages/AuditLogs";
 import { TripleOtConfigPage } from "./pages/TripleOtConfig";
 import { DecisionReasonsPage } from "./pages/DecisionReasonsPage";
 import OtLogsPage from "./pages/OtLogsPage";
