@@ -22,6 +22,8 @@ import {
   RefreshCw,
   BarChart3,
   Pencil,
+  CheckCircle2,
+  CircleSlash,
 } from "lucide-react";
 import StatsModal from "../components/modals/StatsModal";
 
@@ -184,7 +186,8 @@ export function OtEntryPage() {
   const [editOutTime, setEditOutTime] = useState("");
   const [editReason, setEditReason] = useState("");
 
-  const [weekComplete, setWeekComplete] = useState<Record<string, boolean>>({});
+  type DayStatus = "full" | "pending" | "empty";
+  const [weekStatus, setWeekStatus] = useState<Record<string, DayStatus>>({});
 
   useEffect(() => {
     if (!authReady) return;
@@ -198,33 +201,53 @@ export function OtEntryPage() {
     const to = toYYYYMMDD(weekDates[6]);
 
     try {
-      // get all rows for the week (you already use /ot for a day)
       const r = await api.get("/ot", {
         params: { from, to, page: 1, limit: 20000 },
       });
+
       const items = (r.data.items ?? []) as OtRow[];
 
-      // group by date -> set of employees with filled rows
+      // date -> employees who have a filled row
       const filledByDate: Record<string, Set<string>> = {};
+      // date -> employees who are pending (filled row but status pending)
+      const pendingByDate: Record<string, Set<string>> = {};
+
       for (const it of items) {
-        if (!isRowFilled(it)) continue;
         const d = it.workDate;
         const empId = it.employeeId?._id;
         if (!d || !empId) continue;
+
+        if (!isRowFilled(it)) continue;
+
         (filledByDate[d] ??= new Set()).add(empId);
+
+        const st = String((it as any).status ?? "").toUpperCase();
+        if (st === "PENDING") {
+          (pendingByDate[d] ??= new Set()).add(empId);
+        }
       }
 
-      const map: Record<string, boolean> = {};
+      const map: Record<string, DayStatus> = {};
+      const total = employees.length;
+
       for (const d of weekDates.map(toYYYYMMDD)) {
-        map[d] =
-          employees.length > 0 &&
-          (filledByDate[d]?.size ?? 0) === employees.length;
+        const filledCount = filledByDate[d]?.size ?? 0;
+        const pendingCount = pendingByDate[d]?.size ?? 0;
+
+        if (total === 0 || filledCount === 0) {
+          map[d] = "empty";
+        } else if (filledCount < total) {
+          // some people missing => pending week (attention needed)
+          map[d] = "pending";
+        } else {
+          // everyone has filled rows
+          map[d] = pendingCount > 0 ? "pending" : "full";
+        }
       }
 
-      setWeekComplete(map);
+      setWeekStatus(map);
     } catch {
-      // if it fails, just clear (or keep old)
-      setWeekComplete({});
+      setWeekStatus({});
     }
   }
 
@@ -605,8 +628,22 @@ export function OtEntryPage() {
           const date = toYYYYMMDD(d);
           const isSelected = date === selectedDate;
           const stat = weekStats[date];
-          const dayComplete = !!weekComplete[date];
 
+          const status = weekStatus[date] ?? "empty";
+          console.log("Status for", date, "is", status);
+          const badge =
+            status === "full"
+              ? "Complete"
+              : status === "pending"
+                ? "Pending"
+                : "Empty";
+
+          const borderClass =
+            status === "full"
+              ? "border-2 border-green-500"
+              : status === "pending"
+                ? "border-2 border-yellow-500"
+                : "border-2 border-red-500";
           return (
             <div
               key={date}
@@ -615,9 +652,7 @@ export function OtEntryPage() {
                 isSelected
                   ? "bg-gradient-to-br from-brand-blue/10 to-blue-100/30 shadow-sm"
                   : "bg-white/80 backdrop-blur-sm hover:shadow-sm",
-                dayComplete
-                  ? "border-2 border-green-500"
-                  : "border-2 border-red-500",
+                borderClass,
               ].join(" ")}
             >
               <button className="w-full text-left" onClick={() => pickDate(d)}>
@@ -668,7 +703,18 @@ export function OtEntryPage() {
               </button>
 
               {canReadStats ? (
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 flex justify-between items-center gap-2">
+                  <div className="px-2 py-1 text-xs text-gray-700 font-black">
+                    {badge === "Complete" ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    ) : badge === "Pending" ? (
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                    ) : badge === "Empty" ? (
+                      <CircleSlash className="h-4 w-4 text-red-500" />
+                    ) : (
+                      badge
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     icon={<BarChart3 className="h-3 w-3" />}
