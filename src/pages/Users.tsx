@@ -7,14 +7,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../auth/AuthContext";
-import {
-  Edit2,
-  UserPlus,
-  Shield,
-  CheckCircle,
-  XCircle,
-  Key,
-} from "lucide-react";
+import { Edit2, UserPlus, Shield, Key } from "lucide-react";
 
 type Role = { _id: string; name: string; permissions: string[] };
 type UserRow = {
@@ -52,10 +45,15 @@ export function UsersPage() {
     username: "",
     password: "",
     roleId: "",
-    canApprove: false,
   });
 
+  const PROTECTED_EMAILS = ["sterlingsteels.it@gmail.com"];
+
   const pages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total]);
+
+  function isProtectedUser(u: UserRow) {
+    return PROTECTED_EMAILS.includes(u.email.toLowerCase());
+  }
 
   async function loadRoles() {
     const r = await api.get("/roles");
@@ -97,7 +95,6 @@ export function UsersPage() {
       username: "",
       password: "",
       roleId: roles[0]?._id ?? "",
-      canApprove: false,
     });
     setOpen(true);
   }
@@ -109,7 +106,6 @@ export function UsersPage() {
       username: u.username,
       password: "",
       roleId: u.roleId?._id ?? "",
-      canApprove: u.canApprove,
     });
     setOpen(true);
   }
@@ -132,14 +128,14 @@ export function UsersPage() {
           username: form.username,
           password: form.password,
           roleId: form.roleId,
-          canApprove: form.canApprove,
+          canApprove: true,
         });
       } else {
         await api.patch(`/users/${editing._id}`, {
           email: form.email,
           username: form.username,
           roleId: form.roleId,
-          canApprove: form.canApprove,
+          canApprove: true,
         });
       }
 
@@ -271,9 +267,6 @@ export function UsersPage() {
                   Role
                 </th>
                 <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
-                  Approve
-                </th>
-                <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
                   Status
                 </th>
                 <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
@@ -282,100 +275,104 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {items.map((u) => (
-                <tr
-                  key={u._id}
-                  className="transition-all duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
-                >
-                  <td className="px-5 py-4">
-                    <div className="text-gray-900">{u.email}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="font-medium text-gray-900">
-                      {u.username}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue/20 to-blue-100/50">
-                        <Shield className="h-3 w-3 text-brand-blue" />
+              {items.map((u) => {
+                const isProtected = isProtectedUser(u);
+                return (
+                  <tr
+                    key={u._id}
+                    className="transition-all duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="text-gray-900">{u.email}</div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="font-medium text-gray-900">
+                        {u.username}
                       </div>
-                      <span className="font-medium text-gray-800">
-                        {u.roleId?.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${u.canApprove ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-700"}`}
-                    >
-                      {u.canApprove ? (
-                        <>
-                          <CheckCircle className="h-3 w-3" />
-                          Yes
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-3 w-3" />
-                          No
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${u.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-                    >
-                      {u.isActive ? (
-                        <>
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                          Disabled
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      {has("users.update") ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => openEdit(u)}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
-                          icon={<Edit2 className="h-3 w-3" />}
-                        >
-                          Edit
-                        </Button>
-                      ) : null}
-                      {has("users.disable") ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => toggleActive(u)}
-                          disabled={state.user?.id === u._id}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
-                        >
-                          {u.isActive ? "Disable" : "Enable"}
-                        </Button>
-                      ) : null}
-                      {has("users.resetPassword") ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => openResetPassword(u)}
-                          disabled={state.user?.id === u._id}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
-                          icon={<Key className="h-3 w-3" />}
-                        >
-                          Reset PW
-                        </Button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue/20 to-blue-100/50">
+                          <Shield className="h-3 w-3 text-brand-blue" />
+                        </div>
+                        <span className="font-medium text-gray-800">
+                          {u.roleId?.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${u.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+                      >
+                        {u.isActive ? (
+                          <>
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
+                            Disabled
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {(() => {
+                        const isSelf = state.user?.email === u.email;
+
+                        const disabledReason = isProtected
+                          ? "This account is protected"
+                          : isSelf
+                            ? "You can't modify your own account"
+                            : "";
+
+                        return (
+                          <div className="flex flex-wrap gap-2">
+                            {has("users.update") ? (
+                              <Button
+                                variant="ghost"
+                                onClick={() => openEdit(u)}
+                                disabled={isProtected}
+                                title={disabledReason}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                                icon={<Edit2 className="h-3 w-3" />}
+                              >
+                                Edit
+                              </Button>
+                            ) : null}
+
+                            {has("users.disable") ? (
+                              <Button
+                                variant="ghost"
+                                onClick={() => toggleActive(u)}
+                                disabled={isProtected || isSelf}
+                                title={disabledReason}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {u.isActive ? "Disable" : "Enable"}
+                              </Button>
+                            ) : null}
+
+                            {has("users.resetPassword") ? (
+                              <Button
+                                variant="ghost"
+                                onClick={() => openResetPassword(u)}
+                                disabled={isProtected || isSelf}
+                                title={disabledReason}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                                icon={<Key className="h-3 w-3" />}
+                              >
+                                Reset PW
+                              </Button>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                  </tr>
+                );
+              })}
               {items.length === 0 ? (
                 <tr>
                   <td
