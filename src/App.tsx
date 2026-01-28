@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./auth/AuthContext";
 import type { JSX } from "react";
-import StateLoader from "./components/ui/StateLoader";
 
 // Pages
 import { LoginPage } from "./pages/Login";
@@ -15,18 +14,13 @@ import AuditLogsPage from "./pages/AuditLogs";
 import { TripleOtConfigPage } from "./pages/TripleOtConfig";
 import { DecisionReasonsPage } from "./pages/DecisionReasonsPage";
 import OtLogsPage from "./pages/OtLogsPage";
+import Loading from "./components/ui/Loading";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
   if (state.loading)
     return (
-      <StateLoader
-        message="Secure Connection"
-        showProgress={true}
-        connectionSpeed="medium"
-        size="lg"
-        showConnectionSteps={true}
-      />
+      <Loading center="screen" text="Communicating with the server..." typewriter repeat />
     );
   if (!state.user) return <Navigate to="/login" replace />;
   return children;

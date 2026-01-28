@@ -88,7 +88,7 @@ export function DecisionReasonsPage() {
       });
       setItems(r.data.items ?? []);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to load reasons");
+      toast.error(e?.response?.data?.message ?? "Failed to load reasons.");
     } finally {
       setLoading(false);
     }
@@ -102,13 +102,13 @@ export function DecisionReasonsPage() {
   }, [authReady, canRead, activeTab]);
 
   function openCreate() {
-    if (!canCreate) return toast.error("No permission to create reasons");
+    if (!canCreate) return toast.error("No permission to create reasons.");
     setForm({ type: activeTab, label: "", active: true, sort: 0 });
     setModalOpen(true);
   }
 
   function openEdit(r: ReasonRow) {
-    if (!canUpdate) return toast.error("No permission to update reasons");
+    if (!canUpdate) return toast.error("No permission to update reasons.");
     setForm({
       id: r._id,
       type: r.type,
@@ -120,7 +120,7 @@ export function DecisionReasonsPage() {
   }
 
   async function save() {
-    if (!form.label.trim()) return toast.error("Reason label is required");
+    if (!form.label.trim()) return toast.error("Reason label is required.");
 
     setSaving(true);
     const t = toast.loading(form.id ? "Updating..." : "Creating...");
@@ -144,39 +144,39 @@ export function DecisionReasonsPage() {
         await api.post("/decision-reasons", payload);
       }
 
-      toast.success(form.id ? "Updated" : "Created", { id: t });
+      toast.success(form.id ? "Updated." : "Created.", { id: t });
       setModalOpen(false);
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed", { id: t });
+      toast.error(e?.response?.data?.message ?? "Failed.", { id: t });
     } finally {
       setSaving(false);
     }
   }
 
   async function toggleActive(r: ReasonRow) {
-    if (!canUpdate) return toast.error("No permission to update reasons");
+    if (!canUpdate) return toast.error("No permission to update reasons.");
     const t = toast.loading("Updating...");
     try {
       await api.patch(`/decision-reasons/${r._id}`, { active: !r.active });
-      toast.success("Updated", { id: t });
+      toast.success("Updated.", { id: t });
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed", { id: t });
+      toast.error(e?.response?.data?.message ?? "Failed.", { id: t });
     }
   }
 
   async function remove(r: ReasonRow) {
-    if (!canDelete) return toast.error("No permission to delete reasons");
+    if (!canDelete) return toast.error("No permission to delete reasons.");
     if (!confirm(`Delete reason: "${r.label}" ?`)) return;
 
     const t = toast.loading("Deleting...");
     try {
       await api.delete(`/decision-reasons/${r._id}`);
-      toast.success("Deleted", { id: t });
+      toast.success("Deleted.", { id: t });
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed", { id: t });
+      toast.error(e?.response?.data?.message ?? "Failed.", { id: t });
     }
   }
 

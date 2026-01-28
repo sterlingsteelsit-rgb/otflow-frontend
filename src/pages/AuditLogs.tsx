@@ -482,7 +482,7 @@ export default function AuditLogsPage() {
       setItems(r.data.items ?? []);
       setTotal(r.data.total ?? 0);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to load audit logs");
+      toast.error(e?.response?.data?.message ?? "Failed to load audit logs.");
     } finally {
       setLoading(false);
     }
@@ -524,9 +524,9 @@ export default function AuditLogsPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("Audit logs exported successfully");
+      toast.success("Audit logs exported successfully.");
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to export logs");
+      toast.error(e?.response?.data?.message ?? "Failed to export logs.");
     } finally {
       setExporting(false);
     }
@@ -541,10 +541,10 @@ export default function AuditLogsPage() {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        toast.success("Copied to clipboard");
+        toast.success("Copied to clipboard.");
       })
       .catch(() => {
-        toast.error("Failed to copy");
+        toast.error("Failed to copy.");
       });
   }
 

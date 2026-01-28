@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
@@ -27,7 +28,7 @@ type UserRow = {
 };
 
 export function UsersPage() {
-  const { has } = useAuth();
+  const { state, has } = useAuth();
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [items, setItems] = useState<UserRow[]>([]);
@@ -42,6 +43,9 @@ export function UsersPage() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+
+  const [resetUser, setResetUser] = useState<UserRow | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const [form, setForm] = useState({
     email: "",
@@ -142,7 +146,6 @@ export function UsersPage() {
       toast.success("Saved", { id: t });
       setOpen(false);
       await loadUsers();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed", { id: t });
     }
@@ -154,22 +157,30 @@ export function UsersPage() {
       await api.patch(`/users/${u._id}`, { isActive: !u.isActive });
       toast.success("Updated", { id: t });
       await loadUsers();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed", { id: t });
     }
   }
 
-  async function resetPassword(u: UserRow) {
-    const newPass = prompt("Enter new password (min 8):");
-    if (!newPass) return;
-    if (newPass.length < 8) return toast.error("Password too short");
+  function openResetPassword(u: UserRow) {
+    setResetUser(u);
+    setNewPassword("");
+  }
+
+  async function confirmResetPassword() {
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
 
     const t = toast.loading("Resetting password...");
     try {
-      await api.patch(`/users/${u._id}/password`, { password: newPass });
-      toast.success("Password reset", { id: t });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await api.patch(`/users/${resetUser!._id}/password`, {
+        password: newPassword,
+      });
+      toast.success("Password reset.", { id: t });
+      setResetUser(null);
+      setNewPassword("");
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed", { id: t });
     }
@@ -344,6 +355,7 @@ export function UsersPage() {
                         <Button
                           variant="ghost"
                           onClick={() => toggleActive(u)}
+                          disabled={state.user?.id === u._id}
                           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
                         >
                           {u.isActive ? "Disable" : "Enable"}
@@ -352,7 +364,8 @@ export function UsersPage() {
                       {has("users.resetPassword") ? (
                         <Button
                           variant="ghost"
-                          onClick={() => resetPassword(u)}
+                          onClick={() => openResetPassword(u)}
+                          disabled={state.user?.id === u._id}
                           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
                           icon={<Key className="h-3 w-3" />}
                         >
@@ -413,7 +426,7 @@ export function UsersPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal Create - Edit */}
       <Modal
         open={open}
         title={editing ? "Edit User" : "Create User"}
@@ -458,18 +471,6 @@ export function UsersPage() {
             ))}
           </Select>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.canApprove}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, canApprove: e.target.checked }))
-              }
-              className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue/50"
-            />
-            Can Approve (future use)
-          </label>
-
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
             <Button
               variant="ghost"
@@ -483,6 +484,47 @@ export function UsersPage() {
               className="rounded-lg border border-brand-blue bg-gradient-to-r from-brand-blue to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow"
             >
               {editing ? "Save Changes" : "Create User"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Password Reset */}
+      <Modal
+        open={!!resetUser}
+        title="Reset Password"
+        onClose={() => setResetUser(null)}
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-gray-600">
+            Reset password for{" "}
+            <span className="font-semibold text-gray-900">
+              {resetUser?.username} - ({resetUser?.email})
+            </span>
+          </div>
+
+          <Input
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="border-gray-300"
+            placeholder="Minimum 8 characters"
+          />
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Button
+              variant="ghost"
+              onClick={() => setResetUser(null)}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmResetPassword}
+              className="rounded-lg border border-red-600 bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-medium text-white hover:from-red-700 hover:to-red-800"
+            >
+              Reset Password
             </Button>
           </div>
         </div>

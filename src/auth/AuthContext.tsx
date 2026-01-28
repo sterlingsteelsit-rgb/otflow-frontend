@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<LoadProgress>(DEFAULT_PROGRESS);
 
-  // ✅ refresh-on-401 (single retry) + refresh lock + prevent loops
+  const DEBUG_FORCE_LOADING = false;
+
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let refreshPromise: Promise<any> | null = null;
@@ -113,6 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadMe() {
     setLoading(true);
+    if (DEBUG_FORCE_LOADING) {
+      await new Promise(() => {});
+    }
     setProgress({
       step: 1,
       total: 2,

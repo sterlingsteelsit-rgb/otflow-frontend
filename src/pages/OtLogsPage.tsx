@@ -13,6 +13,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  CalendarDays,
+  Users,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Clock3,
 } from "lucide-react";
 
 type EmployeeLite = { _id: string; empId: string; name: string };
@@ -181,6 +187,8 @@ export default function OtLogsPage() {
         anchor, // already normalized
         employeeId: employeeId || undefined,
         status: status || undefined,
+        page: 1,
+        limit: 5000,
       };
 
       if (view === "records") {
@@ -237,7 +245,7 @@ export default function OtLogsPage() {
       <div className="flex items-center gap-1 sm:gap-2">
         <Button
           variant="ghost"
-          className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+          className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
           icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
           iconPosition="left"
           onClick={() =>
@@ -262,7 +270,7 @@ export default function OtLogsPage() {
 
         <Button
           variant="ghost"
-          className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+          className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
           icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
           iconPosition="right"
           onClick={() =>
@@ -275,10 +283,13 @@ export default function OtLogsPage() {
         </Button>
       </div>
 
-      <div className="text-xs text-gray-600 truncate px-1">
-        Week:{" "}
-        <span className="font-semibold text-gray-900">
-          {weekLabelFromAnchor(anchor)}
+      <div className="text-xs text-gray-600 truncate px-1 flex items-center gap-2">
+        <CalendarDays className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+        <span className="truncate">
+          Week:{" "}
+          <span className="font-semibold text-gray-900">
+            {weekLabelFromAnchor(anchor)}
+          </span>
         </span>
       </div>
     </div>
@@ -288,7 +299,7 @@ export default function OtLogsPage() {
     <div className="flex items-center gap-1 sm:gap-2">
       <Button
         variant="ghost"
-        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
         icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
         iconPosition="left"
         onClick={() => {
@@ -315,7 +326,7 @@ export default function OtLogsPage() {
 
       <Button
         variant="ghost"
-        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
         icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
         iconPosition="right"
         onClick={() => {
@@ -335,7 +346,7 @@ export default function OtLogsPage() {
     <div className="flex items-center gap-1 sm:gap-2">
       <Button
         variant="ghost"
-        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
         icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
         iconPosition="left"
         onClick={() => {
@@ -364,7 +375,7 @@ export default function OtLogsPage() {
 
       <Button
         variant="ghost"
-        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[80px] px-2 sm:px-3"
+        className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
         icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
         iconPosition="right"
         onClick={() => {
@@ -455,14 +466,22 @@ export default function OtLogsPage() {
     }
   }
 
+  const shiftTimeMap: Record<string, string> = {
+    "Shift 1": "6:30AM",
+    "Shift 2": "8:30AM",
+    NO_SHIFT: "No Shift",
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end justify-between gap-3 sm:gap-4">
         <div className="w-full sm:w-auto">
-          <h1 className="text-xl sm:text-2xl font-black text-gray-900">
-            OT Logs
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900">
+              OT Logs
+            </h1>
+          </div>
           <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Filter and review overtime easily (Daily / Weekly / Monthly /
             Yearly)
@@ -473,19 +492,25 @@ export default function OtLogsPage() {
         <div className="w-full sm:w-auto rounded-lg sm:rounded-xl border border-gray-200 bg-white px-3 sm:px-4 py-2 text-sm">
           <div className="flex flex-wrap justify-between sm:justify-start gap-3 sm:gap-4">
             <div className="min-w-[80px] sm:min-w-0">
-              <div className="text-xs text-gray-500">Records</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                Records
+              </div>
               <div className="font-black text-gray-900 text-sm sm:text-base">
                 {totals.count}
               </div>
             </div>
             <div className="min-w-[80px] sm:min-w-0">
-              <div className="text-xs text-gray-500">Total OT</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                Total OT
+              </div>
               <div className="font-black text-gray-900 text-sm sm:text-base">
                 {totals.totalOt}
               </div>
             </div>
             <div className="min-w-[80px] sm:min-w-0">
-              <div className="text-xs text-gray-500">Approved OT</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                Approved OT
+              </div>
               <div className="font-black text-gray-900 text-sm sm:text-base">
                 {totals.approvedOt}
               </div>
@@ -496,6 +521,11 @@ export default function OtLogsPage() {
 
       {/* Filters */}
       <div className="rounded-lg sm:rounded-xl border border-gray-200 bg-white p-3 sm:p-4 max-w-full">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter className="h-4 w-4 text-gray-600" />
+          <div className="text-sm font-black text-gray-900">Filters</div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">
           <div className="lg:col-span-2">
             <SelectField
@@ -512,7 +542,7 @@ export default function OtLogsPage() {
           </div>
 
           <div className="sm:col-span-2 lg:col-span-4">
-            <label className="text-xs font-semibold text-gray-600 block mb-1">
+            <label className="text-xs font-semibold text-gray-600 block mb-1 items-center gap-2">
               Pick period
             </label>
             <div className="w-full">{anchorInput}</div>
@@ -534,6 +564,10 @@ export default function OtLogsPage() {
                 })),
               ]}
             />
+            <div className="mt-1 text-[11px] text-gray-500 flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {employeeId ? "Filtered employee" : "All employees"}
+            </div>
           </div>
 
           <div className="sm:col-span-1 lg:col-span-2">
@@ -682,49 +716,31 @@ export default function OtLogsPage() {
                       </div>
                     </td>
                     <td className="px-3 sm:px-4 py-2 hidden sm:table-cell">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Shift
-                      </div>
-                      {r.shift}
+                      {shiftTimeMap[r.shift] ?? "Undefined"}
                     </td>
                     <td className="px-3 sm:px-4 py-2 hidden lg:table-cell">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        In
-                      </div>
                       <span className="font-mono text-xs sm:text-sm">
                         {r.inTime || "-"}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2 hidden lg:table-cell">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Out
-                      </div>
                       <span className="font-mono text-xs sm:text-sm">
                         {r.outTime || "-"}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        OT
-                      </div>
-                      <span className="font-black text-sm sm:text-base">
+                      <span className="text-sm sm:text-base">
                         {minutesToOt(sumMinutes(r))}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2 hidden xl:table-cell">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Approved
-                      </div>
                       <span className="text-sm sm:text-base">
                         {minutesToOt(r.approvedTotalMinutes ?? 0)}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Status
-                      </div>
                       <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                           r.status === "APPROVED"
                             ? "bg-green-100 text-green-800"
                             : r.status === "REJECTED"
@@ -732,6 +748,13 @@ export default function OtLogsPage() {
                               : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
+                        {r.status === "APPROVED" ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : r.status === "REJECTED" ? (
+                          <XCircle className="h-3 w-3" />
+                        ) : (
+                          <Clock3 className="h-3 w-3" />
+                        )}
                         {r.status}
                       </span>
                     </td>
@@ -773,33 +796,19 @@ export default function OtLogsPage() {
                 {summary.map((r, i) => (
                   <tr key={i} className="border-t hover:bg-gray-50">
                     <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Period
-                      </div>
                       <div className="truncate max-w-[150px] sm:max-w-none">
                         {r._id instanceof Date
                           ? new Date(r._id).toISOString().slice(0, 10)
                           : String(r._id)}
                       </div>
                     </td>
+                    <td className="px-3 sm:px-4 py-2">{r.count}</td>
                     <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Count
-                      </div>
-                      {r.count}
-                    </td>
-                    <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Total OT
-                      </div>
                       <span className="font-black">
                         {minutesToOt(sumMinutes(r))}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2">
-                      <div className="block sm:hidden text-xs text-gray-500 mb-1">
-                        Approved OT
-                      </div>
                       {minutesToOt(r.approvedTotalMinutes)}
                     </td>
                   </tr>

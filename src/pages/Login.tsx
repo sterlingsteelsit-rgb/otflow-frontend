@@ -60,7 +60,7 @@ export function LoginPage() {
             <div className="space-y-4">
               <Input
                 label="Email"
-                placeholder="admin@company.com"
+                placeholder="user@company.com"
                 {...register("email")}
                 error={errors.email?.message}
                 className="border-gray-300"

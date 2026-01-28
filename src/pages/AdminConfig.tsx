@@ -46,7 +46,7 @@ export function AdminConfigPage() {
       if (!selected && rRoles.data.items.length)
         setSelected(rRoles.data.items[0]);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to load roles");
+      toast.error(e?.response?.data?.message ?? "Failed to load roles.");
     } finally {
       setLoading(false);
     }
@@ -74,10 +74,10 @@ export function AdminConfigPage() {
         permissions: selected.permissions,
         name: selected.name,
       });
-      toast.success("Saved", { id: t });
+      toast.success("Role saved.", { id: t });
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed", { id: t });
+      toast.error(e?.response?.data?.message ?? "Failed.", { id: t });
     } finally {
       setSaving(false);
     }
@@ -85,17 +85,17 @@ export function AdminConfigPage() {
 
   async function createRole() {
     const name = newRoleName.trim();
-    if (!name) return toast.error("Role name required");
+    if (!name) return toast.error("Role name required.");
 
     const t = toast.loading("Creating role...");
     try {
       await api.post("/roles", { name, permissions: [] });
-      toast.success("Created", { id: t });
+      toast.success("Role created.", { id: t });
       setOpenCreate(false);
       setNewRoleName("");
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed", { id: t });
+      toast.error(e?.response?.data?.message ?? "Failed.", { id: t });
     }
   }
 

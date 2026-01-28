@@ -165,7 +165,7 @@ export function DashboardPage() {
             .catch((e) => {
               setEmployeesTotal(null);
               toast.error(
-                e?.response?.data?.message ?? "Failed to load employees total",
+                e?.response?.data?.message ?? "Failed to load employees total.",
               );
             }),
         );
@@ -179,7 +179,7 @@ export function DashboardPage() {
             .then((r) => setUsersTotal(r.data?.total ?? r.data?.count ?? 0))
             .catch((e) => {
               setUsersTotal(null);
-              toast.error(e?.response?.data?.message ?? "Failed to load users");
+              toast.error(e?.response?.data?.message ?? "Failed to load users.");
             }),
         );
       }
@@ -193,7 +193,7 @@ export function DashboardPage() {
             .catch((e) => {
               setTodayStats(null);
               toast.error(
-                e?.response?.data?.message ?? "Failed to load today stats",
+                e?.response?.data?.message ?? "Failed to load today stats.",
               );
             }),
         );
@@ -205,7 +205,7 @@ export function DashboardPage() {
             .catch((e) => {
               setWeekStats([]);
               toast.error(
-                e?.response?.data?.message ?? "Failed to load week stats",
+                e?.response?.data?.message ?? "Failed to load week stats.",
               );
             }),
         );
@@ -220,7 +220,7 @@ export function DashboardPage() {
             .catch((e) => {
               setAuditRows([]);
               toast.error(
-                e?.response?.data?.message ?? "Failed to load audit logs",
+                e?.response?.data?.message ?? "Failed to load audit logs.",
               );
             }),
         );
