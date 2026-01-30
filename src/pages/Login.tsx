@@ -6,7 +6,7 @@ import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Shield, AlertCircle } from "lucide-react";
+import { LogIn, User, AlertCircle } from "lucide-react";
 
 const schema = z.object({
   email: z.string().email(),
@@ -43,8 +43,7 @@ export function LoginPage() {
         <div className="w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm p-8 shadow-lg">
           {/* Logo Header */}
           <div className="mb-8 text-center">
-            <div className="mb-4 flex justify-center">
-            </div>
+            <div className="mb-4 flex justify-center"></div>
             <div className="text-3xl font-black tracking-tight">
               OT
               <span className="bg-gradient-to-r from-brand-blue to-blue-600 bg-clip-text text-transparent">
@@ -60,7 +59,7 @@ export function LoginPage() {
             <div className="space-y-4">
               <Input
                 label="Email"
-                placeholder="user@company.com"
+                placeholder="user@sterlingsteels.com"
                 {...register("email")}
                 error={errors.email?.message}
                 className="border-gray-300"
@@ -100,16 +99,17 @@ export function LoginPage() {
                     System Information
                   </div>
                   <div className="mt-1">
-                    For account assistance or creation, please contact your Administrator.
+                    For account assistance or creation, please contact your
+                    Administrator.
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-100">
-              <Shield className="h-4 w-4 text-gray-400" />
+              <User className="h-4 w-4 text-gray-400" />
               <div className="text-xs text-gray-500">
-                By Vidun Hettiarachchi
+                Developed by <span className="text-black" >Vidun Hettiarachchi</span>
               </div>
             </div>
           </form>
