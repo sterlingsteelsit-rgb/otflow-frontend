@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   Bell,
+  Fingerprint,
 } from "lucide-react";
 import { usePendingNotifications } from "../../hooks/usePendingNotifications";
 import { Portal } from "./Portal";
@@ -360,6 +361,15 @@ export function AppShell() {
                           to="/admin/config"
                           label="Role Management"
                           Icon={Key}
+                          mode={mode}
+                          onClick={() => setSettingsOpen(false)}
+                        />
+                      )}
+                      {has("fingerprint.process") && (
+                        <Item
+                          to="/fingerprint/process"
+                          label="Fingerprint Logs Processing"
+                          Icon={Fingerprint}
                           mode={mode}
                           onClick={() => setSettingsOpen(false)}
                         />

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./auth/AuthContext";
 import type { JSX } from "react";
+import Loading from "./components/ui/Loading";
 
 // Pages
 import { LoginPage } from "./pages/Login";
@@ -14,13 +15,18 @@ import AuditLogsPage from "./pages/AuditLogs";
 import { TripleOtConfigPage } from "./pages/TripleOtConfig";
 import { DecisionReasonsPage } from "./pages/DecisionReasonsPage";
 import OtLogsPage from "./pages/OtLogsPage";
-import Loading from "./components/ui/Loading";
+import FingerPrintLogFormatter from "./pages/utils/LogsUploader";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
   if (state.loading)
     return (
-      <Loading center="screen" text="Communicating with the server..." typewriter repeat />
+      <Loading
+        center="screen"
+        text="Communicating with the server..."
+        typewriter
+        repeat
+      />
     );
   if (!state.user) return <Navigate to="/login" replace />;
   return children;
@@ -49,6 +55,10 @@ export default function App() {
         <Route path="/triple-ot" element={<TripleOtConfigPage />} />
         <Route path="/audit" element={<AuditLogsPage />} />
         <Route path="/ot-reason" element={<DecisionReasonsPage />} />
+        <Route
+          path="/fingerprint/process"
+          element={<FingerPrintLogFormatter />}
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
