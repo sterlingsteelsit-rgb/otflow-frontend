@@ -46,7 +46,7 @@ type SummaryRow = {
   approvedTotalMinutes: number;
 };
 
-type Scope = "daily" | "weekly" | "monthly" | "yearly";
+type Scope = "daily" | "weekly" | "monthly" | "yearly" | "custom";
 type ViewMode = "records" | "summary";
 
 /* -------------------- date utils -------------------- */
@@ -156,6 +156,9 @@ export default function OtLogsPage() {
     normalizeScopeAnchor("daily", todayYYYYMMDD()),
   );
 
+  const [rangeFrom, setRangeFrom] = useState<string>(() => todayYYYYMMDD());
+  const [rangeTo, setRangeTo] = useState<string>(() => todayYYYYMMDD());
+
   const [employeeId, setEmployeeId] = useState("");
   const [status, setStatus] = useState("");
 
@@ -163,7 +166,14 @@ export default function OtLogsPage() {
   const [summary, setSummary] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const canReadSummary = true; // if you want, check permission before allowing summary
+  function setSafeFrom(v: string) {
+    setRangeFrom(v);
+    if (rangeTo && v > rangeTo) setRangeTo(v);
+  }
+  function setSafeTo(v: string) {
+    setRangeTo(v);
+    if (rangeFrom && v < rangeFrom) setRangeFrom(v);
+  }
 
   async function loadEmployees() {
     setLoadingEmp(true);
@@ -182,14 +192,20 @@ export default function OtLogsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const params = {
+      const params: any = {
         scope,
-        anchor, // already normalized
         employeeId: employeeId || undefined,
         status: status || undefined,
         page: 1,
         limit: 5000,
       };
+
+      if (scope === "custom") {
+        params.from = rangeFrom;
+        params.to = rangeTo;
+      } else {
+        params.anchor = anchor;
+      }
 
       if (view === "records") {
         const r = await api.get("/ot/logs", { params });
@@ -200,7 +216,6 @@ export default function OtLogsPage() {
       }
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed to load logs");
-      // keep old data on error (more user-friendly)
     } finally {
       setLoading(false);
     }
@@ -212,20 +227,23 @@ export default function OtLogsPage() {
 
   useEffect(() => {
     loadData();
-  }, [scope, view, anchor, employeeId, status]);
+  }, [scope, view, anchor, rangeFrom, rangeTo, employeeId, status]);
 
   // When scope changes, auto-normalize anchor so user doesn't have to think
   function changeScope(next: Scope) {
     setScope(next);
 
-    const now = new Date();
-    const normalized = normalizeScopeAnchor(next, toYYYYMMDD(now));
-    setAnchor(normalized);
-
-    // if summary needs permission, fallback to records
-    if (next !== "daily" && view === "summary" && !canReadSummary) {
-      setView("records");
+    if (next === "custom") {
+      // default range: today → today (or last 7 days if you want)
+      const t = todayYYYYMMDD();
+      setRangeFrom(t);
+      setRangeTo(t);
+      return;
     }
+
+    const now = new Date();
+    const normalized = normalizeScopeAnchor(next as any, toYYYYMMDD(now));
+    setAnchor(normalized);
   }
 
   /* -------------------- Friendly pickers -------------------- */
@@ -391,13 +409,6 @@ export default function OtLogsPage() {
     </div>
   );
 
-  const anchorInput = useMemo(() => {
-    if (scope === "daily") return dailyPicker;
-    if (scope === "weekly") return weeklyPicker;
-    if (scope === "monthly") return monthlyPicker;
-    return yearlyPicker;
-  }, [scope, anchor]);
-
   const totals = useMemo(() => {
     if (view === "records") {
       const totalMin = rows.reduce((acc, r) => acc + sumMinutes(r), 0);
@@ -428,13 +439,19 @@ export default function OtLogsPage() {
   async function exportExcel() {
     const t = toast.loading("Preparing Excel...");
     try {
-      const params = {
+      const params: any = {
         scope,
-        anchor,
         employeeId: employeeId || undefined,
         status: status || undefined,
-        mode: view, // "records" or "summary"
+        mode: view,
       };
+
+      if (scope === "custom") {
+        params.from = rangeFrom;
+        params.to = rangeTo;
+      } else {
+        params.anchor = anchor;
+      }
 
       const r = await api.get("/ot/logs/export", {
         params,
@@ -445,9 +462,12 @@ export default function OtLogsPage() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
-      // Try to read filename from header
       const cd = r.headers?.["content-disposition"] as string | undefined;
-      let filename = `ot_${scope}_${anchor}_${view}.xlsx`;
+      let filename =
+        scope === "custom"
+          ? `ot_custom_${rangeFrom}_to_${rangeTo}_${view}.xlsx`
+          : `ot_${scope}_${anchor}_${view}.xlsx`;
+
       const match = cd?.match(/filename="([^"]+)"/);
       if (match?.[1]) filename = match[1];
 
@@ -471,6 +491,41 @@ export default function OtLogsPage() {
     "Shift 2": "8:30AM",
     NO_SHIFT: "No Shift",
   };
+
+  const customPicker = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div>
+        <label className="text-[11px] font-semibold text-gray-600 block mb-1">
+          From
+        </label>
+        <Input
+          type="date"
+          value={rangeFrom}
+          onChange={(e) => setSafeFrom(e.target.value)}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <label className="text-[11px] font-semibold text-gray-600 block mb-1">
+          To
+        </label>
+        <Input
+          type="date"
+          value={rangeTo}
+          onChange={(e) => setSafeTo(e.target.value)}
+          className="w-full"
+        />
+      </div>
+    </div>
+  );
+
+  const anchorInput = useMemo(() => {
+    if (scope === "custom") return customPicker;
+    if (scope === "daily") return dailyPicker;
+    if (scope === "weekly") return weeklyPicker;
+    if (scope === "monthly") return monthlyPicker;
+    return yearlyPicker;
+  }, [scope, anchor, rangeFrom, rangeTo]);
 
   return (
     <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-6 max-w-full overflow-x-hidden">
@@ -537,6 +592,7 @@ export default function OtLogsPage() {
                 { label: "Weekly", value: "weekly" },
                 { label: "Monthly", value: "monthly" },
                 { label: "Yearly", value: "yearly" },
+                { label: "Custom Range", value: "custom" },
               ]}
             />
           </div>
@@ -621,7 +677,13 @@ export default function OtLogsPage() {
               onClick={() => {
                 setEmployeeId("");
                 setStatus("");
-                setAnchor(normalizeScopeAnchor(scope, todayYYYYMMDD()));
+                if (scope === "custom") {
+                  const t = todayYYYYMMDD();
+                  setRangeFrom(t);
+                  setRangeTo(t);
+                } else {
+                  setAnchor(normalizeScopeAnchor(scope, todayYYYYMMDD()));
+                }
               }}
             >
               <span className="hidden sm:inline">Reset</span>
