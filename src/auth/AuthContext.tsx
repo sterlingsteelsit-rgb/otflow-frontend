@@ -9,6 +9,7 @@ import React, {
 import { api } from "../api/client";
 import type { AuthState, User } from "./types";
 import { setAccessToken as setToken } from "./tokenStore";
+import { getJwtExpMs } from "../utils/getJwtExp";
 
 type LoadProgress = {
   step: number; // current step (0..total)
@@ -18,7 +19,11 @@ type LoadProgress = {
 };
 
 type AuthCtx = {
-  state: AuthState & { progress: LoadProgress };
+  state: AuthState & {
+    progress: LoadProgress;
+    remainingSec: number;
+    expiresAt: number | null;
+  };
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   has: (perm: string) => boolean;
@@ -38,6 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<LoadProgress>(DEFAULT_PROGRESS);
+
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [remainingSec, setRemainingSec] = useState<number>(0);
 
   const DEBUG_FORCE_LOADING = false;
 
@@ -79,9 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const rr = await refreshPromise;
 
-            setToken(rr.data.accessToken);
-            setAccessToken(rr.data.accessToken);
+            const token = rr.data.accessToken;
+            setToken(token);
+            setAccessToken(token);
             setUser(rr.data.user);
+            setExpiresAt(getJwtExpMs(token));
 
             setProgress({
               step: 2,
@@ -112,6 +122,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => api.interceptors.response.eject(id);
   }, []);
 
+  useEffect(() => {
+    if (!expiresAt) return;
+
+    const tick = () => {
+      const sec = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setRemainingSec(sec);
+
+      if (sec === 0) {
+        // access token expired
+        logout();
+      }
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
   async function loadMe() {
     setLoading(true);
     if (DEBUG_FORCE_LOADING) {
@@ -134,9 +162,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         label: "Loading user",
       });
 
-      setToken(rr.data.accessToken);
-      setAccessToken(rr.data.accessToken);
+      const token = rr.data.accessToken;
+      setToken(token);
+      setAccessToken(token);
       setUser(rr.data.user);
+      setExpiresAt(getJwtExpMs(token));
 
       setProgress({
         step: 2,
@@ -176,9 +206,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await api.post("/auth/login", { email, password });
 
-      setToken(r.data.accessToken);
-      setAccessToken(r.data.accessToken);
+      const token = r.data.accessToken;
+      setToken(token);
+      setAccessToken(token);
       setUser(r.data.user);
+      setExpiresAt(getJwtExpMs(token));
 
       setProgress({
         step: 2,
@@ -205,6 +237,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setToken(null);
       setAccessToken(null);
+      setExpiresAt(null);
+      setRemainingSec(0);
       setUser(null);
 
       setProgress({
@@ -224,12 +258,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthCtx>(
     () => ({
-      state: { accessToken, user, loading, progress },
+      state: { accessToken, user, loading, progress, remainingSec, expiresAt },
       login,
       logout,
       has,
     }),
-    [accessToken, user, loading, progress],
+    [accessToken, user, loading, progress, remainingSec, expiresAt],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

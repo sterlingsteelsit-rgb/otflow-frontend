@@ -30,6 +30,7 @@ import { usePendingNotifications } from "../../hooks/usePendingNotifications";
 import { Portal } from "./Portal";
 import { api } from "../../api/client";
 import Loading from "../ui/Loading";
+import { formatMmSs } from "../../utils/getJwtExp";
 
 type SidebarMode = "full" | "hidden";
 
@@ -141,6 +142,8 @@ export function AppShell() {
     notifOpen && canSeeNotifs,
   );
   const [count, setCount] = useState(0);
+  const { remainingSec, expiresAt } = state;
+  const expiryText = expiresAt ? new Date(expiresAt).toLocaleTimeString() : "";
 
   useEffect(() => {
     async function loadCount() {
@@ -436,6 +439,22 @@ export function AppShell() {
                     Online
                   </span>
                 </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 border px-4 py-2 rounded-lg border-gray-300 bg-white shadow-sm">
+              <div className="text-sm text-gray-600 whitespace-nowrap">
+                Session:{" "}
+                <span className="font-semibold text-gray-900 px-2 py-1 bg-gray-100 rounded-md">
+                  {formatMmSs(remainingSec)}
+                </span>
+              </div>
+              <div className="h-4 w-px bg-gray-300"></div>
+              <div className="text-sm text-gray-600 whitespace-nowrap">
+                Expires:{" "}
+                <span className="font-semibold text-amber-600 px-2 py-1 bg-amber-50 rounded-md">
+                  {expiryText}
+                </span>
               </div>
             </div>
 
