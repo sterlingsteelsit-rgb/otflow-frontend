@@ -21,7 +21,14 @@ function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
   if (state.loading)
     return (
+      // <Loading
+      //   center="screen"
+      //   text="Communicating with the server..."
+      //   typewriter
+      //   repeat
+      // />
       <Loading
+        customSpinner
         center="screen"
         text="Communicating with the server..."
         typewriter
