@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Router } from "../animate-ui/icons/router";
 
 export interface LoadingProps {
   variant?: "spinner" | "dots";
@@ -17,8 +16,6 @@ export interface LoadingProps {
   typewriterSpeed?: number; // ms
   repeat?: boolean;
   repeatDelay?: number; // ms
-
-  customSpinner?: React.ReactNode;
 }
 
 type SpinnerProps = { sizePx: number; color: string };
@@ -103,8 +100,6 @@ const LoadingText = React.memo(function LoadingText({
   );
 });
 
-const CustomPulseSpinner = () => <Router loop animateOnView size={45} />;
-
 const Loading: React.FC<LoadingProps> = ({
   variant = "spinner",
   size = "medium",
@@ -119,8 +114,6 @@ const Loading: React.FC<LoadingProps> = ({
   typewriterSpeed = 40,
   repeat = false,
   repeatDelay = 1000,
-
-  customSpinner,
 }) => {
   const reducedMotion = useReducedMotion();
 
@@ -189,15 +182,12 @@ const Loading: React.FC<LoadingProps> = ({
   }, [text, typewriter, reducedMotion, typedText.length]);
 
   const loaderNode = useMemo(() => {
-    // ✅ Highest priority
-    if (customSpinner) return <CustomPulseSpinner />;
-
     if (variant === "dots") {
       return <Dots dotPx={dotPx} boxPx={spinnerPx} color={color} />;
     }
 
     return <Spinner sizePx={spinnerPx} color={color} />;
-  }, [customSpinner, variant, dotPx, spinnerPx, color]);
+  }, [variant, dotPx, spinnerPx, color]);
 
   const textNode = useMemo(() => {
     if (!text) return null;
