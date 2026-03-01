@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -149,84 +149,107 @@ export function DashboardPage() {
 
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   async function loadDashboard() {
     if (!authReady) return;
+    if (loading) return;
+
+    abortRef.current?.abort();
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setLoading(true);
     try {
+      const next = {
+        employeesTotal: employeesTotal,
+        usersTotal: usersTotal,
+        todayStats: todayStats,
+        weekStats: weekStats,
+        auditRows: auditRows,
+      };
+
       const jobs: Promise<any>[] = [];
 
-      // Employees total
       if (canEmployees) {
         jobs.push(
           api
-            .get("/employees", { params: { page: 1, limit: 1 } })
-            .then((r) => setEmployeesTotal(r.data?.total ?? r.data?.count ?? 0))
-            .catch((e) => {
-              setEmployeesTotal(null);
-              toast.error(
-                e?.response?.data?.message ?? "Failed to load employees total.",
-              );
+            .get("/employees", {
+              params: { page: 1, limit: 1 },
+              signal: controller.signal,
+            })
+            .then((r) => {
+              next.employeesTotal = r.data?.total ?? r.data?.count ?? 0;
             }),
         );
       }
 
-      // Users total
       if (canUsers) {
         jobs.push(
           api
-            .get("/users", { params: { page: 1, limit: 1 } })
-            .then((r) => setUsersTotal(r.data?.total ?? r.data?.count ?? 0))
-            .catch((e) => {
-              setUsersTotal(null);
-              toast.error(e?.response?.data?.message ?? "Failed to load users.");
+            .get("/users", {
+              params: { page: 1, limit: 1 },
+              signal: controller.signal,
+            })
+            .then((r) => {
+              next.usersTotal = r.data?.total ?? r.data?.count ?? 0;
             }),
         );
       }
 
-      // Today stats + week stats
       if (canStats) {
         jobs.push(
           api
-            .get("/ot/stats/day", { params: { date: todayStr } })
-            .then((r) => setTodayStats(r.data))
-            .catch((e) => {
-              setTodayStats(null);
-              toast.error(
-                e?.response?.data?.message ?? "Failed to load today stats.",
-              );
+            .get("/ot/stats/day", {
+              params: { date: todayStr },
+              signal: controller.signal,
+            })
+            .then((r) => {
+              next.todayStats = r.data;
             }),
         );
 
         jobs.push(
           api
-            .get("/ot/stats/week", { params: { from: weekFrom, to: weekTo } })
-            .then((r) => setWeekStats(r.data?.items ?? []))
-            .catch((e) => {
-              setWeekStats([]);
-              toast.error(
-                e?.response?.data?.message ?? "Failed to load week stats.",
-              );
+            .get("/ot/stats/week", {
+              params: { from: weekFrom, to: weekTo },
+              signal: controller.signal,
+            })
+            .then((r) => {
+              next.weekStats = r.data?.items ?? [];
             }),
         );
       }
 
-      // Recent audit
       if (canAudit) {
         jobs.push(
           api
-            .get("/audit", { params: { page: 1, limit: 6 } })
-            .then((r) => setAuditRows(r.data?.items ?? []))
-            .catch((e) => {
-              setAuditRows([]);
-              toast.error(
-                e?.response?.data?.message ?? "Failed to load audit logs.",
-              );
+            .get("/audit", {
+              params: { page: 1, limit: 6 },
+              signal: controller.signal,
+            })
+            .then((r) => {
+              next.auditRows = r.data?.items ?? [];
             }),
         );
       }
 
-      await Promise.all(jobs);
+      await Promise.all(
+        jobs.map((p) =>
+          p.catch((e) => {
+            if (controller.signal.aborted) return;
+            toast.error(
+              e?.response?.data?.message ?? "Failed to load dashboard data.",
+            );
+          }),
+        ),
+      );
+      setEmployeesTotal(next.employeesTotal ?? null);
+      setUsersTotal(next.usersTotal ?? null);
+      setTodayStats(next.todayStats ?? null);
+      setWeekStats(next.weekStats ?? []);
+      setAuditRows(next.auditRows ?? []);
     } finally {
       setLoading(false);
     }
@@ -234,25 +257,25 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadDashboard();
+
+    return () => {
+      abortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, canEmployees, canUsers, canStats, canAudit]);
 
   const weekChartData = useMemo(() => {
-    // normalize to 7 days (Mon..Sun)
-    const days = Array.from({ length: 7 }, (_, i) =>
-      toYYYYMMDD(addDays(weekStart, i)),
-    );
     const map = new Map<string, DayStats>();
     for (const it of weekStats) map.set(it.date, it);
 
-    return days.map((d) => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const dateObj = addDays(weekStart, i);
+      const d = toYYYYMMDD(dateObj);
       const it = map.get(d);
-      const label = new Date(d + "T00:00:00").toLocaleDateString(undefined, {
-        weekday: "short",
-      });
+
       return {
         date: d,
-        day: label,
+        day: dateObj.toLocaleDateString(undefined, { weekday: "short" }),
         total: it?.total ?? 0,
         pending: it?.pending ?? 0,
         approved: it?.approved ?? 0,
@@ -263,6 +286,17 @@ export function DashboardPage() {
       };
     });
   }, [weekStats, weekStart]);
+
+  const axisTick = useMemo(() => ({ fill: "#6b7280" }), []);
+  const tooltipStyle = useMemo(
+    () => ({
+      borderRadius: "8px",
+      border: "1px solid #e5e7eb",
+      background: "rgba(255, 255, 255, 0.95)",
+      backdropFilter: "blur(4px)",
+    }),
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -390,21 +424,14 @@ export function DashboardPage() {
                         dataKey="day"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "#6b7280" }}
+                        tick={axisTick}
                       />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "#6b7280" }}
+                        tick={axisTick}
                       />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: "1px solid #e5e7eb",
-                          background: "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(4px)",
-                        }}
-                      />
+                      <Tooltip contentStyle={tooltipStyle} />
                       <Bar
                         dataKey="total"
                         fill="#3b82f6"
@@ -441,21 +468,10 @@ export function DashboardPage() {
                       dataKey="day"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#6b7280" }}
+                      tick={axisTick}
                     />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#6b7280" }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        background: "rgba(255, 255, 255, 0.95)",
-                        backdropFilter: "blur(4px)",
-                      }}
-                    />
+                    <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+                    <Tooltip contentStyle={tooltipStyle} />
                     <Legend />
                     <Line
                       type="monotone"

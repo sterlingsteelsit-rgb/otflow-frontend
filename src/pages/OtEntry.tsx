@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -109,17 +110,6 @@ function minutesToOt(min: number) {
   return `${s}`;
 }
 
-function sumMinutes(
-  r: Pick<OtRow, "normalMinutes" | "doubleMinutes" | "tripleMinutes">,
-) {
-  return r.normalMinutes + r.doubleMinutes + r.tripleMinutes;
-}
-
-function isRowFilled(it: OtRow) {
-  if (it.shift === "NO_SHIFT") return true;
-  return Boolean(it.inTime?.trim() && it.outTime?.trim());
-}
-
 export function OtEntryPage() {
   const { has, state } = useAuth();
 
@@ -186,67 +176,58 @@ export function OtEntryPage() {
   const [editOutTime, setEditOutTime] = useState("");
   const [editReason, setEditReason] = useState("");
 
+  const [dayReq, setDayReq] = useState<AbortController | null>(null);
+  const weekRange = useMemo(() => {
+    return {
+      from: toYYYYMMDD(weekDates[0]),
+      to: toYYYYMMDD(weekDates[6]),
+    };
+  }, [weekDates]);
+
   type DayStatus = "full" | "pending" | "empty";
   const [weekStatus, setWeekStatus] = useState<Record<string, DayStatus>>({});
 
   useEffect(() => {
     if (!authReady) return;
     if (!employees.length) return;
-    loadWeekCompleteness();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const c = new AbortController();
+    loadWeekCompleteness(c.signal);
+    return () => c.abort();
   }, [authReady, weekStart, employees.length]);
 
-  async function loadWeekCompleteness() {
-    const from = toYYYYMMDD(weekDates[0]);
-    const to = toYYYYMMDD(weekDates[6]);
+  async function loadWeekCompleteness(signal?: AbortSignal) {
+    const { from, to } = weekRange;
 
     try {
-      const r = await api.get("/ot", {
-        params: { from, to, page: 1, limit: 20000 },
+      const r = await api.get("/ot/week-completeness", {
+        params: { from, to },
+        signal,
       });
 
-      const items = (r.data.items ?? []) as OtRow[];
+      const items = (r.data.items ?? []) as Array<{
+        date: string;
+        filledCount: number;
+        pendingCount: number;
+      }>;
 
-      // date -> employees who have a filled row
-      const filledByDate: Record<string, Set<string>> = {};
-      // date -> employees who are pending (filled row but status pending)
-      const pendingByDate: Record<string, Set<string>> = {};
-
-      for (const it of items) {
-        const d = it.workDate;
-        const empId = it.employeeId?._id;
-        if (!d || !empId) continue;
-
-        if (!isRowFilled(it)) continue;
-
-        (filledByDate[d] ??= new Set()).add(empId);
-
-        const st = String((it as any).status ?? "").toUpperCase();
-        if (st === "PENDING") {
-          (pendingByDate[d] ??= new Set()).add(empId);
-        }
-      }
-
-      const map: Record<string, DayStatus> = {};
+      const mapByDate = new Map(items.map((x) => [x.date, x]));
       const total = employees.length;
+      const map: Record<string, DayStatus> = {};
 
       for (const d of weekDates.map(toYYYYMMDD)) {
-        const filledCount = filledByDate[d]?.size ?? 0;
-        const pendingCount = pendingByDate[d]?.size ?? 0;
+        const it = mapByDate.get(d);
+        const filledCount = it?.filledCount ?? 0;
+        const pendingCount = it?.pendingCount ?? 0;
 
-        if (total === 0 || filledCount === 0) {
-          map[d] = "empty";
-        } else if (filledCount < total) {
-          // some people missing => pending week (attention needed)
-          map[d] = "pending";
-        } else {
-          // everyone has filled rows
-          map[d] = pendingCount > 0 ? "pending" : "full";
-        }
+        if (total === 0 || filledCount === 0) map[d] = "empty";
+        else if (filledCount < total) map[d] = "pending";
+        else map[d] = pendingCount > 0 ? "pending" : "full";
       }
 
       setWeekStatus(map);
-    } catch {
+    } catch (e: any) {
+      if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
       setWeekStatus({});
     }
   }
@@ -266,13 +247,25 @@ export function OtEntryPage() {
   }
 
   async function loadDay(date: string) {
+    dayReq?.abort();
+    const c = new AbortController();
+    setDayReq(c);
+
     setDayLoading(true);
     try {
       const r = await api.get("/ot", {
-        params: { from: date, to: date, page: 1, limit: 2000 },
+        params: {
+          from: date,
+          to: date,
+          page: 1,
+          limit: 200,
+        },
+        signal: c.signal,
       });
+
       setDayItems(r.data.items);
     } catch (e: any) {
+      if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
       toast.error(e?.response?.data?.message ?? "Failed to load OT entries");
     } finally {
       setDayLoading(false);
@@ -339,10 +332,28 @@ export function OtEntryPage() {
         approvedTripleMinutes: approvedT,
       });
       toast.success("Approved", { id: t });
+
+      const newApprovedTotal = approvedN + approvedD + approvedT;
+
+      setDayItems((prev) =>
+        prev.map((x) =>
+          x._id === actingId
+            ? {
+                ...x,
+                status: "APPROVED",
+                approvedNormalMinutes: approvedN,
+                approvedDoubleMinutes: approvedD,
+                approvedTripleMinutes: approvedT,
+                approvedTotalMinutes: newApprovedTotal,
+              }
+            : x,
+        ),
+      );
+
       setApproveOpen(false);
       setActingId(null);
-      await loadDay(selectedDate);
       await loadWeekStats();
+      loadWeekCompleteness();
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed", { id: t });
     }
@@ -361,7 +372,6 @@ export function OtEntryPage() {
   useEffect(() => {
     if (!authReady) return;
     loadWeekStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, weekStart, canReadStats]);
 
   function prevWeek() {
@@ -443,10 +453,7 @@ export function OtEntryPage() {
           reason: r.reason?.trim() ? r.reason.trim() : undefined,
         })),
       };
-
-      console.log("Payload:", payload);
       const resp = await api.post("/ot/bulk", payload);
-      console.log(resp.data);
 
       if ((resp.data.insertedCount ?? 0) === 0 && resp.data.errors?.length) {
         toast.error(resp.data.errors[0], { id: t });
@@ -491,11 +498,25 @@ export function OtEntryPage() {
       });
 
       toast.success("Updated", { id: t });
+
+      setDayItems((prev) =>
+        prev.map((x) =>
+          x._id === editId
+            ? {
+                ...x,
+                shift: editShift,
+                inTime: editShift === "NO_SHIFT" ? "" : editInTime,
+                outTime: editShift === "NO_SHIFT" ? "" : editOutTime,
+                reason: editReason?.trim() ? editReason.trim() : undefined,
+              }
+            : x,
+        ),
+      );
+
       setEditOpen(false);
       setEditId(null);
-
-      await loadDay(selectedDate);
       await loadWeekStats();
+      loadWeekCompleteness();
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed to update", { id: t });
     }
@@ -534,10 +555,22 @@ export function OtEntryPage() {
     try {
       await api.patch(`/ot/${actingId}/reject`, { reason: finalReason });
       toast.success("Rejected", { id: t });
+
+      setDayItems((prev) =>
+        prev.map((x) =>
+          x._id === actingId
+            ? {
+                ...x,
+                status: "REJECTED",
+              }
+            : x,
+        ),
+      );
+
       setRejectOpen(false);
       setActingId(null);
-      await loadDay(selectedDate);
       await loadWeekStats();
+      loadWeekCompleteness();
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Failed", { id: t });
     }
@@ -564,6 +597,29 @@ export function OtEntryPage() {
       setAuditLoading(false);
     }
   }
+
+  const dayView = useMemo(() => {
+    return dayItems.map((it) => {
+      const shiftLabel =
+        it.shift === "NO_SHIFT"
+          ? "No Shift"
+          : it.shift === "Shift 1"
+            ? "6:30AM"
+            : it.shift === "Shift 2"
+              ? "8:30AM"
+              : it.shift || "";
+
+      const n = minutesToOt(it.normalMinutes);
+      const d = minutesToOt(it.doubleMinutes);
+      const t = minutesToOt(it.tripleMinutes);
+      const total = minutesToOt(
+        it.normalMinutes + it.doubleMinutes + it.tripleMinutes,
+      );
+      const approved = minutesToOt(it.approvedTotalMinutes ?? 0);
+
+      return { it, shiftLabel, n, d, t, total, approved };
+    });
+  }, [dayItems]);
 
   const selectedDayLabel = useMemo(() => {
     const d = new Date(selectedDate + "T00:00:00");
@@ -630,7 +686,6 @@ export function OtEntryPage() {
           const stat = weekStats[date];
 
           const status = weekStatus[date] ?? "empty";
-          console.log("Status for", date, "is", status);
           const badge =
             status === "full"
               ? "Complete"
@@ -787,15 +842,7 @@ export function OtEntryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {dayItems.map((it) => {
-                const shiftLabel =
-                  it.shift === "NO_SHIFT"
-                    ? "No Shift"
-                    : it.shift === "Shift 1"
-                      ? "6:30AM"
-                      : it.shift === "Shift 2"
-                        ? "8:30AM"
-                        : it.shift || "";
+              {dayView.map(({ it, shiftLabel, n, d, t, total, approved }) => {
                 return (
                   <tr
                     key={it._id}
@@ -835,19 +882,19 @@ export function OtEntryPage() {
                       <div className="text-xs text-gray-600 space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                          <span>N {minutesToOt(it.normalMinutes)}</span>
+                          <span>N {n}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                          <span>D {minutesToOt(it.doubleMinutes)}</span>
+                          <span>D {d}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                          <span>T {minutesToOt(it.tripleMinutes)}</span>
+                          <span>T {t}</span>
                         </div>
                       </div>
                       <div className="mt-1 font-black text-gray-900">
-                        {minutesToOt(sumMinutes(it))}
+                        {total}
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -861,7 +908,7 @@ export function OtEntryPage() {
                     <td className="px-5 py-4">
                       {it.status === "APPROVED" ? (
                         <div className="font-black text-gray-900">
-                          {minutesToOt(it.approvedTotalMinutes ?? 0)}
+                          {approved}
                         </div>
                       ) : (
                         <div className="text-xs text-gray-500">-</div>
