@@ -11,6 +11,8 @@ import type { AuthState, User } from "./types";
 import { setAccessToken as setToken } from "./tokenStore";
 import { getJwtExpMs } from "../utils/getJwtExp";
 
+type LogoutReason = "SESSION_EXPIRED" | "MANUAL" | "UNKNOWN";
+
 type LoadProgress = {
   step: number; // current step (0..total)
   total: number; // total steps
@@ -23,9 +25,10 @@ type AuthCtx = {
     progress: LoadProgress;
     remainingSec: number;
     expiresAt: number | null;
+    logoutReason: string | null;
   };
   login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (reason?: LogoutReason) => Promise<void>;
   has: (perm: string) => boolean;
 };
 
@@ -46,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [remainingSec, setRemainingSec] = useState<number>(0);
+  const [logoutReason, setLogoutReason] = useState<LogoutReason | null>(null);
 
   const DEBUG_FORCE_LOADING = false;
 
@@ -125,13 +129,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!expiresAt) return;
 
+    let fired = false;
+
     const tick = () => {
       const sec = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
       setRemainingSec(sec);
 
-      if (sec === 0) {
+      if (sec === 0 && !fired) {
         // access token expired
-        logout();
+        fired = true;
+        logout("SESSION_EXPIRED");
       }
     };
 
@@ -211,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccessToken(token);
       setUser(r.data.user);
       setExpiresAt(getJwtExpMs(token));
+      setLogoutReason(null);
 
       setProgress({
         step: 2,
@@ -223,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function logout() {
+  async function logout(reason: LogoutReason = "MANUAL") {
     setLoading(true);
     setProgress({
       step: 1,
@@ -235,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post("/auth/logout");
     } finally {
+      setLogoutReason(reason);
       setToken(null);
       setAccessToken(null);
       setExpiresAt(null);
@@ -258,12 +267,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthCtx>(
     () => ({
-      state: { accessToken, user, loading, progress, remainingSec, expiresAt },
+      state: {
+        accessToken,
+        user,
+        loading,
+        progress,
+        remainingSec,
+        expiresAt,
+        logoutReason,
+      },
       login,
       logout,
       has,
     }),
-    [accessToken, user, loading, progress, remainingSec, expiresAt],
+    [
+      accessToken,
+      user,
+      loading,
+      progress,
+      remainingSec,
+      expiresAt,
+      logoutReason,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

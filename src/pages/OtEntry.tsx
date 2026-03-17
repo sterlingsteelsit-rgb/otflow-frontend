@@ -27,6 +27,11 @@ import {
   CircleSlash,
 } from "lucide-react";
 import StatsModal from "../components/modals/StatsModal";
+import {
+  calcOtMinutesUI,
+  dayTypeFromDate,
+  minsToHours,
+} from "../utils/otCalcPreview";
 
 export type EmployeeLite = { _id: string; empId: string; name: string };
 
@@ -121,6 +126,7 @@ export function OtEntryPage() {
   );
 
   const [selectedDate, setSelectedDate] = useState(() => toYYYYMMDD(today));
+  const [isTripleDay, setIsTripleDay] = useState(false);
 
   const [employees, setEmployees] = useState<EmployeeLite[]>([]);
   const [loadingEmp, setLoadingEmp] = useState(false);
@@ -186,6 +192,65 @@ export function OtEntryPage() {
 
   type DayStatus = "full" | "pending" | "empty";
   const [weekStatus, setWeekStatus] = useState<Record<string, DayStatus>>({});
+
+  const dayType = useMemo(() => dayTypeFromDate(selectedDate), [selectedDate]);
+  const dayPayLabel = useMemo(() => {
+    if (isTripleDay)
+      return { label: "TRIPLE OT Day", pill: "bg-orange-50 text-orange-700" };
+    if (dayType === "SUNDAY")
+      return {
+        label: "DOUBLE OT Day (Sunday)",
+        pill: "bg-green-50 text-green-700",
+      };
+    if (dayType === "SATURDAY")
+      return {
+        label: "NORMAL OT (Saturday rules)",
+        pill: "bg-yellow-50 text-yellow-700",
+      };
+    return {
+      label: "NORMAL OT (Weekday rules)",
+      pill: "bg-blue-50 text-blue-700",
+    };
+  }, []);
+  const createPreview = useMemo(() => {
+    return createRows.map((r) => {
+      const isNoShift = r.shift === "NO_SHIFT";
+      if (isNoShift) {
+        return {
+          normalMinutes: 0,
+          doubleMinutes: 0,
+          tripleMinutes: 0,
+          isNight: false,
+        };
+      }
+      return calcOtMinutesUI({
+        workDate: selectedDate,
+        shift: r.shift,
+        inTime: r.inTime,
+        outTime: r.outTime,
+        isTripleDay,
+      });
+    });
+  }, [createRows, selectedDate, isTripleDay]);
+
+  function getApiErrorMessage(e: any, fallback = "Something went wrong") {
+    const data = e?.response?.data;
+
+    // Common shapes
+    if (typeof data === "string") return data;
+    if (data?.message) return data.message;
+
+    // Your backend might send { errors: [...] }
+    if (Array.isArray(data?.errors) && data.errors.length)
+      return String(data.errors[0]);
+
+    // Zod / validation style: { issues: [...] }
+    if (Array.isArray(data?.issues) && data.issues.length)
+      return data.issues[0]?.message ?? fallback;
+
+    // Axios generic
+    return e?.message ?? fallback;
+  }
 
   useEffect(() => {
     if (!authReady) return;
@@ -455,13 +520,21 @@ export function OtEntryPage() {
       };
       const resp = await api.post("/ot/bulk", payload);
 
-      if ((resp.data.insertedCount ?? 0) === 0 && resp.data.errors?.length) {
-        toast.error(resp.data.errors[0], { id: t });
-        return;
-      }
       const inserted = resp.data.insertedCount ?? 0;
       const duplicates = resp.data.duplicates ?? 0;
 
+      // All rows were duplicates → show a clean message (NOT empty "error")
+      if (inserted === 0 && duplicates > 0) {
+        toast.error(
+          `No new entries saved. ${duplicates} duplicate(s) were skipped.`,
+          {
+            id: t,
+          },
+        );
+        return;
+      }
+
+      // Some inserted, some duplicates → success message
       toast.success(
         duplicates > 0
           ? `Saved ${inserted}. Skipped ${duplicates} duplicates.`
@@ -474,8 +547,17 @@ export function OtEntryPage() {
       await loadDay(selectedDate);
       await loadWeekStats();
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? e?.message ?? "Failed to save";
-      toast.error(msg, { id: t });
+      if (e?.response?.status === 409) {
+        const data = e?.response?.data;
+        const msg =
+          data?.message ||
+          (Array.isArray(data?.errors) ? data.errors.join(", ") : "") ||
+          "Duplicate OT entry detected.";
+        toast.error(msg, { id: t });
+        return;
+      }
+
+      toast.error(getApiErrorMessage(e, "Failed to save OT"), { id: t });
     }
   }
 
@@ -843,77 +925,158 @@ export function OtEntryPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {dayView.map(({ it, shiftLabel, n, d, t, total, approved }) => {
+                const dimN = n === "0";
+                const dimD = d === "0";
+                const dimT = t === "0";
+
                 return (
                   <tr
                     key={it._id}
-                    className="transition-all duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
+                    className="transition-colors duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
                   >
+                    {/* Employee */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue/20 to-blue-100/50">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue/20 to-blue-100/50">
                           <User className="h-4 w-4 text-brand-blue" />
                         </div>
-                        <div>
-                          <div className="font-black text-gray-900">
+                        <div className="min-w-0">
+                          <div className="truncate font-black text-gray-900">
                             {it.employeeId?.empId}
                           </div>
-                          <div className="text-xs text-gray-600">
+                          <div className="truncate text-xs text-gray-600">
                             {it.employeeId?.name}
                           </div>
                         </div>
                       </div>
                     </td>
+
+                    {/* Shift */}
                     <td className="px-5 py-4">
                       <div className="font-medium text-gray-900">
                         {shiftLabel}
                       </div>
                     </td>
+
+                    {/* In */}
                     <td className="px-5 py-4">
-                      <div className="font-mono font-medium text-gray-900">
-                        {it.inTime?.trim() ? it.inTime : "-"}
+                      <div className="font-mono font-semibold text-gray-900">
+                        {it.inTime?.trim() ? (
+                          it.inTime
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </div>
                     </td>
+
+                    {/* Out */}
                     <td className="px-5 py-4">
-                      <div className="font-mono font-medium text-gray-900">
-                        {it.outTime?.trim() ? it.outTime : "-"}
+                      <div className="font-mono font-semibold text-gray-900">
+                        {it.outTime?.trim() ? (
+                          it.outTime
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </div>
                     </td>
+
+                    {/* OT Hours */}
                     <td className="px-5 py-4">
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                          <span>N {n}</span>
+                      <div className="flex items-stretch justify-between gap-4 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                        <div className="space-y-1 text-xs text-gray-700">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-blue-500" />
+                            <span
+                              className={dimN ? "text-gray-400" : "font-medium"}
+                            >
+                              Normal
+                            </span>
+                            <span
+                              className={
+                                dimN
+                                  ? "text-gray-400"
+                                  : "font-black text-gray-900"
+                              }
+                            >
+                              ({n})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-green-500" />
+                            <span
+                              className={dimD ? "text-gray-400" : "font-medium"}
+                            >
+                              Double
+                            </span>
+                            <span
+                              className={
+                                dimD
+                                  ? "text-gray-400"
+                                  : "font-black text-gray-900"
+                              }
+                            >
+                              ({d})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-orange-500" />
+                            <span
+                              className={dimT ? "text-gray-400" : "font-medium"}
+                            >
+                              Triple
+                            </span>
+                            <span
+                              className={
+                                dimT
+                                  ? "text-gray-400"
+                                  : "font-black text-gray-900"
+                              }
+                            >
+                              ({t})
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                          <span>D {d}</span>
+
+                        <div className="flex flex-col justify-center border-l border-gray-200 pl-4 text-right">
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                            Total
+                          </div>
+                          <div className="text-lg font-black leading-none text-gray-900">
+                            {total}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                          <span>T {t}</span>
-                        </div>
-                      </div>
-                      <div className="mt-1 font-black text-gray-900">
-                        {total}
                       </div>
                     </td>
+
+                    {/* Night */}
                     <td className="px-5 py-4">
                       <div
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${it.isNight ? "bg-purple-50 text-purple-700" : "bg-gray-100 text-gray-700"}`}
+                        className={[
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                          it.isNight
+                            ? "bg-purple-50 text-purple-700"
+                            : "bg-gray-100 text-gray-700",
+                        ].join(" ")}
                       >
                         <Moon className="h-3 w-3" />
                         {it.isNight ? "Yes" : "No"}
                       </div>
                     </td>
+
+                    {/* Approved OT */}
                     <td className="px-5 py-4">
                       {it.status === "APPROVED" ? (
                         <div className="font-black text-gray-900">
                           {approved}
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-500">-</div>
+                        <div className="text-xs text-gray-400">—</div>
                       )}
                     </td>
+
+                    {/* Status */}
                     <td className="px-5 py-4">
                       <div
                         className={[
@@ -941,6 +1104,8 @@ export function OtEntryPage() {
                         {it.status}
                       </div>
                     </td>
+
+                    {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
                         {it.status === "PENDING" && canApprove ? (
@@ -1028,6 +1193,25 @@ export function OtEntryPage() {
         size="xl"
       >
         <div className="space-y-4">
+          {/* Top bar: day type + triple toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white/70 p-3">
+            <div
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ${dayPayLabel.pill}`}
+            >
+              {dayPayLabel.label}
+            </div>
+
+            <label className="flex items-center gap-2 text-xs font-black text-gray-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={isTripleDay}
+                onChange={(e) => setIsTripleDay(e.target.checked)}
+              />
+              Mark as Triple OT day
+            </label>
+          </div>
+
           <div className="text-sm text-gray-600">
             Create multiple OT rows quickly. Duplicates (same employee + date)
             will be skipped by backend.
@@ -1042,13 +1226,18 @@ export function OtEntryPage() {
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
             {createRows.map((r, i) => {
+              const p = createPreview[i];
+              const totalMins =
+                p.normalMinutes + p.doubleMinutes + p.tripleMinutes;
               const isNoShift = r.shift === "NO_SHIFT";
+
               return (
                 <div
                   key={i}
                   className="rounded-xl border border-gray-200 bg-gray-50/50 p-4"
                 >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+                    {/* Employee */}
                     <div className="md:col-span-4">
                       <SelectField
                         label="Employee"
@@ -1068,6 +1257,7 @@ export function OtEntryPage() {
                       />
                     </div>
 
+                    {/* Shift */}
                     <div className="md:col-span-2">
                       <SelectField
                         label="Shift"
@@ -1084,6 +1274,7 @@ export function OtEntryPage() {
                       />
                     </div>
 
+                    {/* In */}
                     <div className="md:col-span-2">
                       <Input
                         label="In Time"
@@ -1095,6 +1286,7 @@ export function OtEntryPage() {
                       />
                     </div>
 
+                    {/* Out */}
                     <div className="md:col-span-2">
                       <Input
                         label="Out Time"
@@ -1106,17 +1298,103 @@ export function OtEntryPage() {
                       />
                     </div>
 
+                    {/* Reason */}
                     <div className="md:col-span-2">
                       <Input
                         label="Reason"
-                        value={r.reason || "-"}
+                        value={r.reason || ""}
                         onChange={(e) => setRow(i, { reason: e.target.value })}
                         className="border-gray-300"
+                        placeholder="Optional"
                       />
                     </div>
 
+                    {/* Preview (placed after inputs = nicer UX) */}
+                    {isNoShift ? (
+                      <div className="text-xs text-gray-500">
+                        No shift selected
+                      </div>
+                    ) : (
+                      <div className="md:col-span-12">
+                        <div className="rounded-lg border border-gray-200 bg-white/70 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-xs font-black text-gray-700">
+                              Preview OT
+                            </div>
+
+                            {p.isNight ? (
+                              <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-black text-purple-700">
+                                Night
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-black text-gray-600">
+                                Day
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <div className="rounded bg-blue-50 p-2">
+                              <div className="text-[10px] font-black text-blue-700">
+                                Normal
+                              </div>
+                              <div className="text-sm font-black text-blue-900">
+                                {minsToHours(p.normalMinutes)}h
+                              </div>
+                              <div className="text-[10px] text-blue-700/80">
+                                {p.normalMinutes} min
+                              </div>
+                            </div>
+
+                            <div className="rounded bg-green-50 p-2">
+                              <div className="text-[10px] font-black text-green-700">
+                                Double
+                              </div>
+                              <div className="text-sm font-black text-green-900">
+                                {minsToHours(p.doubleMinutes)}h
+                              </div>
+                              <div className="text-[10px] text-green-700/80">
+                                {p.doubleMinutes} min
+                              </div>
+                            </div>
+
+                            <div className="rounded bg-orange-50 p-2">
+                              <div className="text-[10px] font-black text-orange-700">
+                                Triple
+                              </div>
+                              <div className="text-sm font-black text-orange-900">
+                                {minsToHours(p.tripleMinutes)}h
+                              </div>
+                              <div className="text-[10px] text-orange-700/80">
+                                {p.tripleMinutes} min
+                              </div>
+                            </div>
+
+                            <div className="rounded bg-gray-50 p-2">
+                              <div className="text-[10px] font-black text-gray-700">
+                                Total
+                              </div>
+                              <div className="text-sm font-black text-gray-900">
+                                {minsToHours(totalMins)}h
+                              </div>
+                              <div className="text-[10px] text-gray-700/80">
+                                {totalMins} min
+                              </div>
+                            </div>
+                          </div>
+
+                          {!r.inTime || !r.outTime ? (
+                            <div className="mt-2 text-[11px] text-gray-500">
+                              Enter in/out time to preview OT (rounded down to
+                              15 mins).
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="md:col-span-12 flex justify-end gap-2">
-                      {createRows.length > 1 && (
+                      {createRows.length > 1 ? (
                         <Button
                           variant="ghost"
                           onClick={() => removeCreateRow(i)}
@@ -1126,7 +1404,7 @@ export function OtEntryPage() {
                         >
                           Remove
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1134,6 +1412,7 @@ export function OtEntryPage() {
             })}
           </div>
 
+          {/* Footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-gray-100">
             <Button
               variant="ghost"
@@ -1149,11 +1428,11 @@ export function OtEntryPage() {
               <Button
                 variant="ghost"
                 onClick={() => setCreateOpen(false)}
-                iconPosition="left"
                 className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               >
                 Cancel
               </Button>
+
               <Button
                 onClick={saveBulk}
                 className="rounded-lg border border-brand-blue bg-gradient-to-r from-brand-blue to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow"
@@ -1223,7 +1502,6 @@ export function OtEntryPage() {
       </Modal>
 
       {/* Reject modal */}
-      {/* Reject modal */}
       <Modal
         open={rejectOpen}
         title="Reject OT"
@@ -1276,23 +1554,23 @@ export function OtEntryPage() {
         onClose={() => setApproveOpen(false)}
       >
         <Input
-          label="Approved Normal (minutes)"
+          label="Approved Normal"
           type="number"
-          value={approvedN}
+          value={minsToHours(approvedN)}
           onChange={(e) => setApprovedN(Number(e.target.value))}
         />
 
         <Input
-          label="Approved Double (minutes)"
+          label="Approved Double"
           type="number"
-          value={approvedD}
+          value={minsToHours(approvedD)}
           onChange={(e) => setApprovedD(Number(e.target.value))}
         />
 
         <Input
-          label="Approved Triple (minutes)"
+          label="Approved Triple"
           type="number"
-          value={approvedT}
+          value={minsToHours(approvedT)}
           onChange={(e) => setApprovedT(Number(e.target.value))}
         />
         <div className="space-y-4">

@@ -16,6 +16,7 @@ type UserRow = {
   username: string;
   canApprove: boolean;
   isActive: boolean;
+  activeStatus: string;
   roleId: Role;
   createdAt: string;
 };
@@ -83,10 +84,10 @@ export function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, roleId, isActive]);
 
-  async function onSearch() {
-    setPage(1);
-    await loadUsers();
-  }
+  // async function onSearch() {
+  //   setPage(1);
+  //   await loadUsers();
+  // }
 
   function openCreate() {
     setEditing(null);
@@ -208,7 +209,7 @@ export function UsersPage() {
 
       {/* Filters */}
       <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Input
             label="Search"
             placeholder="email or username"
@@ -239,7 +240,7 @@ export function UsersPage() {
             <option value="true">Active</option>
             <option value="false">Disabled</option>
           </Select>
-          <div className="flex items-end">
+          {/* <div className="flex items-end">
             <Button
               variant="ghost"
               className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
@@ -247,7 +248,7 @@ export function UsersPage() {
             >
               Search
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -257,6 +258,9 @@ export function UsersPage() {
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white/80">
               <tr className="text-left">
+                <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
+                  Active
+                </th>
                 <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
                   Email
                 </th>
@@ -282,6 +286,41 @@ export function UsersPage() {
                     key={u._id}
                     className="transition-all duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
                   >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center">
+                        <div className="relative">
+                          {/* Avatar */}
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-blue-500 text-white text-xs font-bold shadow-sm">
+                            {u.username
+                              ? u.username
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()
+                              : u.email[0].toUpperCase()}
+                          </div>
+
+                          {/* Presence dot */}
+                          <span
+                            title={
+                              u.activeStatus === "online"
+                                ? "Online"
+                                : u.activeStatus === "offline"
+                                  ? "Offline"
+                                  : "Unknown"
+                            }
+                            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${
+                              u.activeStatus === "online"
+                                ? "bg-green-500"
+                                : u.activeStatus === "offline"
+                                  ? "bg-gray-400"
+                                  : "bg-gray-300"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-5 py-4">
                       <div className="text-gray-900">{u.email}</div>
                     </td>

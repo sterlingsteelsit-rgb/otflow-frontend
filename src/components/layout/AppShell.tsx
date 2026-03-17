@@ -391,7 +391,7 @@ export function AppShell() {
                   "hover:from-red-100 hover:to-red-200/80 hover:text-red-700",
                   "border border-red-200 hover:border-red-300 hover:shadow-sm",
                 )}
-                onClick={logout}
+                onClick={() => logout("MANUAL")}
                 icon={<LogOut className="h-4 w-4" />}
               >
                 {mode === "full" && (
