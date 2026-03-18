@@ -6,12 +6,14 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./auth/AuthContext.tsx";
 import SessionExpiryWarning from "./components/ui/SessionExpiryWarning.tsx";
+// import { SeasonalEffects } from "./components/common/SeasonalEffects.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <SessionExpiryWarning />
+        {/* <SeasonalEffects /> */}
         <App />
         <Toaster position="top-center" />
       </AuthProvider>

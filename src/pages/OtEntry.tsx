@@ -182,6 +182,12 @@ export function OtEntryPage() {
   const [editOutTime, setEditOutTime] = useState("");
   const [editReason, setEditReason] = useState("");
 
+  const [editNormalHours, setEditNormalHours] = useState("0");
+  const [editDoubleHours, setEditDoubleHours] = useState("0");
+  const [editTripleHours, setEditTripleHours] = useState("0");
+  const [editIsNight, setEditIsNight] = useState(false);
+  const [editManualOverride, setEditManualOverride] = useState(false);
+
   const [dayReq, setDayReq] = useState<AbortController | null>(null);
   const weekRange = useMemo(() => {
     return {
@@ -211,7 +217,7 @@ export function OtEntryPage() {
       label: "NORMAL OT (Weekday rules)",
       pill: "bg-blue-50 text-blue-700",
     };
-  }, []);
+  }, [isTripleDay, dayType]);
   const createPreview = useMemo(() => {
     return createRows.map((r) => {
       const isNoShift = r.shift === "NO_SHIFT";
@@ -232,6 +238,25 @@ export function OtEntryPage() {
       });
     });
   }, [createRows, selectedDate, isTripleDay]);
+
+  const editPreview = useMemo(() => {
+    if (editShift === "NO_SHIFT") {
+      return {
+        normalMinutes: 0,
+        doubleMinutes: 0,
+        tripleMinutes: 0,
+        isNight: false,
+      };
+    }
+
+    return calcOtMinutesUI({
+      workDate: selectedDate,
+      shift: editShift,
+      inTime: editInTime,
+      outTime: editOutTime,
+      isTripleDay,
+    });
+  }, [selectedDate, editShift, editInTime, editOutTime, isTripleDay]);
 
   function getApiErrorMessage(e: any, fallback = "Something went wrong") {
     const data = e?.response?.data;
@@ -455,6 +480,13 @@ export function OtEntryPage() {
     setEditInTime(row.inTime);
     setEditOutTime(row.outTime);
     setEditReason(row.reason || "");
+
+    setEditNormalHours(minsToHours(row.normalMinutes));
+    setEditDoubleHours(minsToHours(row.doubleMinutes));
+    setEditTripleHours(minsToHours(row.tripleMinutes));
+    setEditIsNight(row.isNight);
+
+    setEditManualOverride(false);
     setEditOpen(true);
   }
 
@@ -564,19 +596,51 @@ export function OtEntryPage() {
   async function confirmEdit() {
     if (!editId) return;
 
-    // Frontend validation to match backend rules
     if (editShift !== "NO_SHIFT") {
       if (!editInTime) return toast.error("In time required");
       if (!editOutTime) return toast.error("Out time required");
     }
 
+    const normalMinutes =
+      editShift === "NO_SHIFT"
+        ? 0
+        : editManualOverride
+          ? Math.round(Number(editNormalHours || 0) * 60)
+          : editPreview.normalMinutes;
+
+    const doubleMinutes =
+      editShift === "NO_SHIFT"
+        ? 0
+        : editManualOverride
+          ? Math.round(Number(editDoubleHours || 0) * 60)
+          : editPreview.doubleMinutes;
+
+    const tripleMinutes =
+      editShift === "NO_SHIFT"
+        ? 0
+        : editManualOverride
+          ? Math.round(Number(editTripleHours || 0) * 60)
+          : editPreview.tripleMinutes;
+
+    const isNight =
+      editShift === "NO_SHIFT"
+        ? false
+        : editManualOverride
+          ? editIsNight
+          : editPreview.isNight;
+
     const t = toast.loading("Updating...");
+
     try {
       await api.patch(`/ot/${editId}`, {
         shift: editShift,
         inTime: editShift === "NO_SHIFT" ? "" : editInTime,
         outTime: editShift === "NO_SHIFT" ? "" : editOutTime,
         reason: editReason?.trim() ? editReason.trim() : undefined,
+        normalMinutes,
+        doubleMinutes,
+        tripleMinutes,
+        isNight,
       });
 
       toast.success("Updated", { id: t });
@@ -590,6 +654,10 @@ export function OtEntryPage() {
                 inTime: editShift === "NO_SHIFT" ? "" : editInTime,
                 outTime: editShift === "NO_SHIFT" ? "" : editOutTime,
                 reason: editReason?.trim() ? editReason.trim() : undefined,
+                normalMinutes,
+                doubleMinutes,
+                tripleMinutes,
+                isNight,
               }
             : x,
         ),
@@ -1445,48 +1513,177 @@ export function OtEntryPage() {
       </Modal>
 
       {/* Edit modal */}
-      <Modal open={editOpen} title="Edit OT" onClose={() => setEditOpen(false)}>
-        <div className="space-y-4">
-          <SelectField
-            label="Shift"
-            value={editShift}
-            onValueChange={(v) => {
-              setEditShift(v);
-              if (v === "NO_SHIFT") {
-                setEditInTime("");
-                setEditOutTime("");
-              }
-            }}
-            options={SHIFTS.map((s) => ({ label: s.label, value: s.value }))}
-          />
+      <Modal
+        open={editOpen}
+        title="Edit OT"
+        onClose={() => setEditOpen(false)}
+        className="max-w-2xl"
+      >
+        <div className="space-y-5">
+          {/* Basic details */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <SelectField
+              label="Shift"
+              value={editShift}
+              onValueChange={(v) => {
+                setEditShift(v);
 
-          <Input
-            label="In Time"
-            type="time"
-            value={editInTime}
-            disabled={editShift === "NO_SHIFT"}
-            onChange={(e) => setEditInTime(e.target.value)}
-          />
+                if (v === "NO_SHIFT") {
+                  setEditInTime("");
+                  setEditOutTime("");
+                  setEditManualOverride(false);
+                  setEditNormalHours("0");
+                  setEditDoubleHours("0");
+                  setEditTripleHours("0");
+                  setEditIsNight(false);
+                }
+              }}
+              options={SHIFTS.map((s) => ({ label: s.label, value: s.value }))}
+            />
 
-          <Input
-            label="Out Time"
-            type="time"
-            value={editOutTime}
-            disabled={editShift === "NO_SHIFT"}
-            onChange={(e) => setEditOutTime(e.target.value)}
-          />
+            <Input
+              label="Reason"
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+            />
 
-          <Input
-            label="Reason"
-            value={editReason}
-            onChange={(e) => setEditReason(e.target.value)}
-          />
+            <Input
+              label="In Time"
+              type="time"
+              value={editInTime}
+              disabled={editShift === "NO_SHIFT"}
+              onChange={(e) => setEditInTime(e.target.value)}
+            />
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Input
+              label="Out Time"
+              type="time"
+              value={editOutTime}
+              disabled={editShift === "NO_SHIFT"}
+              onChange={(e) => setEditOutTime(e.target.value)}
+            />
+          </div>
+
+          {/* Auto preview */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-gray-900">
+                  Auto Calculated Preview
+                </div>
+                <div className="text-xs text-gray-500">
+                  Based on shift and in/out time
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={editManualOverride}
+                  disabled={editShift === "NO_SHIFT"}
+                  onChange={(e) => setEditManualOverride(e.target.checked)}
+                />
+                Manual Override
+              </label>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-blue-50 p-3">
+                <div className="text-[11px] font-black uppercase tracking-wide text-blue-700">
+                  Normal
+                </div>
+                <div className="mt-1 text-base font-black text-blue-900">
+                  {minsToHours(editPreview.normalMinutes)}h
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-green-50 p-3">
+                <div className="text-[11px] font-black uppercase tracking-wide text-green-700">
+                  Double
+                </div>
+                <div className="mt-1 text-base font-black text-green-900">
+                  {minsToHours(editPreview.doubleMinutes)}h
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-orange-50 p-3">
+                <div className="text-[11px] font-black uppercase tracking-wide text-orange-700">
+                  Triple
+                </div>
+                <div className="mt-1 text-base font-black text-orange-900">
+                  {minsToHours(editPreview.tripleMinutes)}h
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-gray-100 p-3">
+                <div className="text-[11px] font-black uppercase tracking-wide text-gray-700">
+                  Night
+                </div>
+                <div className="mt-1 text-base font-black text-gray-900">
+                  {editPreview.isNight ? "Yes" : "No"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Manual override section */}
+          {editManualOverride && editShift !== "NO_SHIFT" ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+              <div className="mb-3">
+                <div className="text-sm font-black text-amber-900">
+                  Manual OT Override
+                </div>
+                <div className="text-xs text-amber-700">
+                  These values will be saved instead of the auto-calculated
+                  preview
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Input
+                  label="Normal OT Hours"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  value={editNormalHours}
+                  onChange={(e) => setEditNormalHours(e.target.value)}
+                />
+
+                <Input
+                  label="Double OT Hours"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  value={editDoubleHours}
+                  onChange={(e) => setEditDoubleHours(e.target.value)}
+                />
+
+                <Input
+                  label="Triple OT Hours"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  value={editTripleHours}
+                  onChange={(e) => setEditTripleHours(e.target.value)}
+                />
+
+                <label className="flex h-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={editIsNight}
+                    onChange={(e) => setEditIsNight(e.target.checked)}
+                  />
+                  Night OT
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
             <Button
               variant="ghost"
               onClick={() => setEditOpen(false)}
-              className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
+              className="border border-gray-300 bg-white font-black text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </Button>
