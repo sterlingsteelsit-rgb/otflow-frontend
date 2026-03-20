@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
 import { Button } from "../components/ui/Button";
@@ -12,19 +12,9 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Clock,
-  User,
-  Moon,
-  CheckCircle,
-  XCircle,
   Eye,
-  Trash2,
   RefreshCw,
-  BarChart3,
-  Pencil,
-  CheckCircle2,
-  CircleSlash,
 } from "lucide-react";
 import StatsModal from "../components/modals/StatsModal";
 import {
@@ -32,88 +22,30 @@ import {
   dayTypeFromDate,
   minsToHours,
 } from "../utils/otCalcPreview";
-
-export type EmployeeLite = { _id: string; empId: string; name: string };
-
-export type OtRow = {
-  _id: string;
-  employeeId: EmployeeLite;
-  workDate: string;
-  shift: string;
-  inTime: string;
-  outTime: string;
-  reason?: string;
-  normalMinutes: number;
-  doubleMinutes: number;
-  tripleMinutes: number;
-  isNight: boolean;
-  approvedNormalMinutes?: number;
-  approvedDoubleMinutes?: number;
-  approvedTripleMinutes?: number;
-  approvedTotalMinutes?: number;
-  isApprovedOverride?: boolean;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-};
-
-type DayStats = {
-  date: string;
-  total: number;
-  pending: number;
-  approved: number;
-  rejected: number;
-  hours: { normal: number; double: number; triple: number };
-};
-
-type CreateRow = {
-  employeeId: string;
-  shift: string;
-  inTime: string;
-  outTime: string;
-  reason: string;
-};
-
-type AuditRow = {
-  _id: string;
-  createdAt: string;
-  actorUserId?: { username?: string; email?: string } | null;
-  action: string;
-  entityType: string;
-  entityId: string;
-  meta?: Record<string, unknown>;
-};
-
-type ReasonOpt = { _id: string; label: string };
+import { WeekDayCard } from "./WeekDayCard";
+import { OtEntryRow } from "./OtEntryRow";
+import { CreateOtRow } from "./CreateOtRow";
+import type {
+  AuditRow,
+  BulkApproveRow,
+  CreateRow,
+  DayStats,
+  EmployeeLite,
+  OtRow,
+  ReasonOpt,
+} from "../utils/otTypes";
+import {
+  addDays,
+  makeCreateRow,
+  startOfWeekMonday,
+  toYYYYMMDD,
+} from "../utils/otFuncs";
 
 const SHIFTS = [
   { label: "NO Shift", value: "NO_SHIFT" },
   { label: "Shift 1", value: "Shift 1" },
   { label: "Shift 2", value: "Shift 2" },
 ];
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-function toYYYYMMDD(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-function addDays(date: Date, days: number) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-function startOfWeekMonday(today: Date) {
-  const d = new Date(today);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function minutesToOt(min: number) {
-  const h = Math.round((min / 60) * 100) / 100;
-  const s = String(h).replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
-  return `${s}`;
-}
 
 export function OtEntryPage() {
   const { has, state } = useAuth();
@@ -141,9 +73,7 @@ export function OtEntryPage() {
   const [stats, setStats] = useState<DayStats | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createRows, setCreateRows] = useState<CreateRow[]>([
-    { employeeId: "", shift: "Shift 1", inTime: "", outTime: "", reason: "" },
-  ]);
+  const [createRows, setCreateRows] = useState<CreateRow[]>([makeCreateRow()]);
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -159,6 +89,7 @@ export function OtEntryPage() {
   const canApprove = has("ot.approve");
   const canReject = has("ot.reject");
   const canReadAudit = has("audit.read");
+  const canUpdate = has("ot.update");
 
   const authReady = !state.loading && !!state.accessToken;
 
@@ -187,6 +118,12 @@ export function OtEntryPage() {
   const [editTripleHours, setEditTripleHours] = useState("0");
   const [editIsNight, setEditIsNight] = useState(false);
   const [editManualOverride, setEditManualOverride] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+  const [bulkApproveReasonId, setBulkApproveReasonId] = useState("");
+  const [bulkApproveReasonText, setBulkApproveReasonText] = useState("");
+  const [bulkRows, setBulkRows] = useState<BulkApproveRow[]>([]);
 
   const [dayReq, setDayReq] = useState<AbortController | null>(null);
   const weekRange = useMemo(() => {
@@ -218,26 +155,6 @@ export function OtEntryPage() {
       pill: "bg-blue-50 text-blue-700",
     };
   }, [isTripleDay, dayType]);
-  const createPreview = useMemo(() => {
-    return createRows.map((r) => {
-      const isNoShift = r.shift === "NO_SHIFT";
-      if (isNoShift) {
-        return {
-          normalMinutes: 0,
-          doubleMinutes: 0,
-          tripleMinutes: 0,
-          isNight: false,
-        };
-      }
-      return calcOtMinutesUI({
-        workDate: selectedDate,
-        shift: r.shift,
-        inTime: r.inTime,
-        outTime: r.outTime,
-        isTripleDay,
-      });
-    });
-  }, [createRows, selectedDate, isTripleDay]);
 
   const editPreview = useMemo(() => {
     if (editShift === "NO_SHIFT") {
@@ -260,20 +177,12 @@ export function OtEntryPage() {
 
   function getApiErrorMessage(e: any, fallback = "Something went wrong") {
     const data = e?.response?.data;
-
-    // Common shapes
     if (typeof data === "string") return data;
     if (data?.message) return data.message;
-
-    // Your backend might send { errors: [...] }
     if (Array.isArray(data?.errors) && data.errors.length)
       return String(data.errors[0]);
-
-    // Zod / validation style: { issues: [...] }
     if (Array.isArray(data?.issues) && data.issues.length)
       return data.issues[0]?.message ?? fallback;
-
-    // Axios generic
     return e?.message ?? fallback;
   }
 
@@ -377,30 +286,79 @@ export function OtEntryPage() {
     }
   }
 
-  async function fetchReasons(type: "APPROVE" | "REJECT") {
-    const r = await api.get("/decision-reasons", {
-      params: { type, active: "true" },
-    });
-    return (r.data.items ?? []) as ReasonOpt[];
-  }
-
-  async function openApprove(row: OtRow) {
+  async function openBulkApprove() {
     if (!canApprove) return toast.error("No permission to approve");
-    setActingId(row._id);
-    setApproveReasonId("");
-    setApproveReasonText("");
-    setApprovedN(row.normalMinutes);
-    setApprovedD(row.doubleMinutes);
-    setApprovedT(row.tripleMinutes);
-    setApproveOpen(true);
+    if (!selectedRows.length) return toast.error("Select at least one row");
+
+    const rows: BulkApproveRow[] = selectedRows.map((row) => {
+      const total =
+        (row.normalMinutes ?? 0) +
+        (row.doubleMinutes ?? 0) +
+        (row.tripleMinutes ?? 0);
+
+      const isNoShiftBlocked = row.shift === "NO_SHIFT" && total === 0;
+
+      return {
+        id: row._id,
+        employeeLabel: `${row.employeeId.empId} - ${row.employeeId.name}`,
+        shift: row.shift,
+        inTime: row.inTime || "-",
+        outTime: row.outTime || "-",
+        normalMinutes: row.normalMinutes ?? 0,
+        doubleMinutes: row.doubleMinutes ?? 0,
+        tripleMinutes: row.tripleMinutes ?? 0,
+        approvedNormalMinutes: row.normalMinutes ?? 0,
+        approvedDoubleMinutes: row.doubleMinutes ?? 0,
+        approvedTripleMinutes: row.tripleMinutes ?? 0,
+        canApprove: row.status === "PENDING" && !isNoShiftBlocked,
+        warning: isNoShiftBlocked
+          ? "NO_SHIFT with zero OT. Review manually."
+          : row.shift === "NO_SHIFT"
+            ? "NO_SHIFT entry. Please verify carefully."
+            : "",
+      };
+    });
+
+    setBulkRows(rows);
+    setBulkApproveReasonId("");
+    setBulkApproveReasonText("");
+    setBulkApproveOpen(true);
 
     try {
       const items = await fetchReasons("APPROVE");
       setApproveReasons(items);
     } catch {
-      // ignore, still allow custom text
+      //
     }
   }
+
+  const fetchReasons = useCallback(async (type: "APPROVE" | "REJECT") => {
+    const r = await api.get("/decision-reasons", {
+      params: { type, active: "true" },
+    });
+    return (r.data.items ?? []) as ReasonOpt[];
+  }, []);
+
+  const openApprove = useCallback(
+    async (row: OtRow) => {
+      if (!canApprove) return toast.error("No permission to approve");
+      setActingId(row._id);
+      setApproveReasonId("");
+      setApproveReasonText("");
+      setApprovedN(row.normalMinutes);
+      setApprovedD(row.doubleMinutes);
+      setApprovedT(row.tripleMinutes);
+      setApproveOpen(true);
+
+      try {
+        const items = await fetchReasons("APPROVE");
+        setApproveReasons(items);
+      } catch {
+        // ignore, still allow custom text
+      }
+    },
+    [canApprove],
+  );
 
   async function confirmApprove() {
     if (!actingId) return;
@@ -449,6 +407,48 @@ export function OtEntryPage() {
     }
   }
 
+  async function confirmBulkApprove() {
+    const rowsToApprove = bulkRows.filter((x) => x.canApprove);
+
+    if (!rowsToApprove.length) {
+      return toast.error("No valid rows to approve");
+    }
+
+    const selectedLabel =
+      approveReasons.find((x) => x._id === bulkApproveReasonId)?.label ?? "";
+
+    const finalReason = (
+      bulkApproveReasonText.trim() ||
+      selectedLabel ||
+      ""
+    ).trim();
+
+    const t = toast.loading("Bulk approving...");
+
+    try {
+      await Promise.all(
+        rowsToApprove.map((row) =>
+          api.patch(`/ot/${row.id}/approve`, {
+            reason: finalReason || undefined,
+            approvedNormalMinutes: row.approvedNormalMinutes,
+            approvedDoubleMinutes: row.approvedDoubleMinutes,
+            approvedTripleMinutes: row.approvedTripleMinutes,
+          }),
+        ),
+      );
+
+      toast.success(`Approved ${rowsToApprove.length} entries`, { id: t });
+
+      setBulkApproveOpen(false);
+      setSelectedIds([]);
+      await loadDay(selectedDate);
+      await loadWeekStats();
+      loadWeekCompleteness();
+    } catch (e: any) {
+      toast.error(getApiErrorMessage(e, "Bulk approve failed"), { id: t });
+    }
+  }
+
   useEffect(() => {
     if (!authReady) return;
     loadEmployees();
@@ -464,17 +464,23 @@ export function OtEntryPage() {
     loadWeekStats();
   }, [authReady, weekStart, canReadStats]);
 
-  function prevWeek() {
-    setWeekStart((d) => addDays(d, -7));
-  }
-  function nextWeek() {
-    setWeekStart((d) => addDays(d, 7));
-  }
-  function pickDate(d: Date) {
-    setSelectedDate(toYYYYMMDD(d));
-  }
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [selectedDate]);
 
-  function openEdit(row: OtRow) {
+  const prevWeek = useCallback(() => {
+    setWeekStart((d) => addDays(d, -7));
+  }, []);
+
+  const nextWeek = useCallback(() => {
+    setWeekStart((d) => addDays(d, 7));
+  }, []);
+
+  const pickDate = useCallback((d: Date) => {
+    setSelectedDate(toYYYYMMDD(d));
+  }, []);
+
+  const openEdit = useCallback((row: OtRow) => {
     setEditId(row._id);
     setEditShift(row.shift);
     setEditInTime(row.inTime);
@@ -488,42 +494,59 @@ export function OtEntryPage() {
 
     setEditManualOverride(false);
     setEditOpen(true);
-  }
+  }, []);
 
-  async function openStats(date: string) {
-    if (!canReadStats) return;
-    setStatsOpen(true);
-    setStatsLoading(true);
-    try {
-      const r = await api.get("/ot/stats/day", { params: { date } });
-      setStats(r.data);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to load stats");
-      setStats(null);
-    } finally {
-      setStatsLoading(false);
-    }
-  }
+  const openStats = useCallback(
+    async (date: string) => {
+      if (!canReadStats) return;
+      setStatsOpen(true);
+      setStatsLoading(true);
+      try {
+        const r = await api.get("/ot/stats/day", { params: { date } });
+        setStats(r.data);
+      } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Failed to load stats");
+        setStats(null);
+      } finally {
+        setStatsLoading(false);
+      }
+    },
+    [canReadStats],
+  );
 
-  function resetCreate() {
-    setCreateRows([
-      { employeeId: "", shift: "Shift 1", inTime: "", outTime: "", reason: "" },
-    ]);
-  }
-  function addCreateRow() {
-    setCreateRows((rows) => [
-      ...rows,
-      { employeeId: "", shift: "Shift 1", inTime: "", outTime: "", reason: "" },
-    ]);
-  }
-  function removeCreateRow(i: number) {
+  const resetCreate = useCallback(() => {
+    setCreateRows([makeCreateRow()]);
+  }, []);
+
+  const addCreateRow = useCallback(() => {
+    setCreateRows((rows) => [...rows, makeCreateRow()]);
+  }, []);
+
+  const removeCreateRow = useCallback((i: number) => {
     setCreateRows((rows) => rows.filter((_, idx) => idx !== i));
-  }
-  function setRow(i: number, patch: Partial<CreateRow>) {
+  }, []);
+
+  const setRow = useCallback((i: number, patch: Partial<CreateRow>) => {
     setCreateRows((rows) =>
       rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
     );
-  }
+  }, []);
+
+  const toggleRowSelection = useCallback((id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    const approvableIds = dayItems
+      .filter((x) => x.status === "PENDING")
+      .map((x) => x._id);
+
+    setSelectedIds((prev) =>
+      prev.length === approvableIds.length ? [] : approvableIds,
+    );
+  }, [dayItems]);
 
   async function saveBulk() {
     if (!canCreate) return toast.error("No permission to create OT");
@@ -555,7 +578,6 @@ export function OtEntryPage() {
       const inserted = resp.data.insertedCount ?? 0;
       const duplicates = resp.data.duplicates ?? 0;
 
-      // All rows were duplicates → show a clean message (NOT empty "error")
       if (inserted === 0 && duplicates > 0) {
         toast.error(
           `No new entries saved. ${duplicates} duplicate(s) were skipped.`,
@@ -566,7 +588,6 @@ export function OtEntryPage() {
         return;
       }
 
-      // Some inserted, some duplicates → success message
       toast.success(
         duplicates > 0
           ? `Saved ${inserted}. Skipped ${duplicates} duplicates.`
@@ -672,23 +693,24 @@ export function OtEntryPage() {
     }
   }
 
-  async function openReject(row: OtRow) {
-    if (!has("ot.reject")) return toast.error("No permission to reject");
+  const openReject = useCallback(
+    async (row: OtRow) => {
+      if (!canReject) return toast.error("No permission to reject");
 
-    setActingId(row._id);
+      setActingId(row._id);
+      setRejectReasonId("");
+      setRejectReason("");
+      setRejectOpen(true);
 
-    // reset fields
-    setRejectReasonId("");
-    setRejectReason("");
-    setRejectOpen(true);
-
-    try {
-      const items = await fetchReasons("REJECT");
-      setRejectReasons(items);
-    } catch {
-      // ignore, still allow manual typing
-    }
-  }
+      try {
+        const items = await fetchReasons("REJECT");
+        setRejectReasons(items);
+      } catch {
+        // ignore, still allow manual typing
+      }
+    },
+    [canReject],
+  );
 
   async function confirmReject() {
     if (!actingId) return;
@@ -726,50 +748,28 @@ export function OtEntryPage() {
     }
   }
 
-  // ---- Audit (per record) - do NOT force entityType, use entityId only
-  async function openAuditForOt(row: OtRow) {
-    if (!has("audit.read"))
-      return toast.error("No permission to view audit logs");
+  const openAuditForOt = useCallback(
+    async (row: OtRow) => {
+      if (!canReadAudit) return toast.error("No permission to view audit logs");
 
-    setAuditTitle(`Audit - ${row.employeeId.empId} (${row.workDate})`);
-    setAuditOpen(true);
-    setAuditLoading(true);
-    setAuditRows([]);
+      setAuditTitle(`Audit - ${row.employeeId.empId} (${row.workDate})`);
+      setAuditOpen(true);
+      setAuditLoading(true);
+      setAuditRows([]);
 
-    try {
-      const r = await api.get("/audit", {
-        params: { entityId: row._id, page: 1, limit: 50 },
-      });
-      setAuditRows(r.data.items ?? []);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Failed to load audit");
-    } finally {
-      setAuditLoading(false);
-    }
-  }
-
-  const dayView = useMemo(() => {
-    return dayItems.map((it) => {
-      const shiftLabel =
-        it.shift === "NO_SHIFT"
-          ? "No Shift"
-          : it.shift === "Shift 1"
-            ? "6:30AM"
-            : it.shift === "Shift 2"
-              ? "8:30AM"
-              : it.shift || "";
-
-      const n = minutesToOt(it.normalMinutes);
-      const d = minutesToOt(it.doubleMinutes);
-      const t = minutesToOt(it.tripleMinutes);
-      const total = minutesToOt(
-        it.normalMinutes + it.doubleMinutes + it.tripleMinutes,
-      );
-      const approved = minutesToOt(it.approvedTotalMinutes ?? 0);
-
-      return { it, shiftLabel, n, d, t, total, approved };
-    });
-  }, [dayItems]);
+      try {
+        const r = await api.get("/audit", {
+          params: { entityId: row._id, page: 1, limit: 50 },
+        });
+        setAuditRows(r.data.items ?? []);
+      } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Failed to load audit");
+      } finally {
+        setAuditLoading(false);
+      }
+    },
+    [canReadAudit],
+  );
 
   const selectedDayLabel = useMemo(() => {
     const d = new Date(selectedDate + "T00:00:00");
@@ -780,6 +780,31 @@ export function OtEntryPage() {
       day: "numeric",
     });
   }, [selectedDate]);
+
+  const employeeOptions = useMemo(
+    () => [
+      {
+        label: "Select employee",
+        value: "",
+        disabled: true,
+      },
+      ...employees.map((e) => ({
+        label: `${e.empId} - ${e.name}`,
+        value: e._id,
+      })),
+    ],
+    [employees],
+  );
+
+  const shiftOptions = useMemo(
+    () => SHIFTS.map((s) => ({ label: s.label, value: s.value })),
+    [],
+  );
+
+  const selectedRows = useMemo(
+    () => dayItems.filter((x) => selectedIds.includes(x._id)),
+    [dayItems, selectedIds],
+  );
 
   return (
     <div className="space-y-6">
@@ -811,6 +836,18 @@ export function OtEntryPage() {
             Next Week
           </Button>
 
+          {canApprove ? (
+            <div>
+              <Button
+                onClick={openBulkApprove}
+                variant="ghost"
+                className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
+              >
+                Bulk Approve ({selectedRows.length})
+              </Button>
+            </div>
+          ) : null}
+
           {canCreate ? (
             <Button
               onClick={() => {
@@ -832,107 +869,19 @@ export function OtEntryPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
         {weekDates.map((d) => {
           const date = toYYYYMMDD(d);
-          const isSelected = date === selectedDate;
-          const stat = weekStats[date];
 
-          const status = weekStatus[date] ?? "empty";
-          const badge =
-            status === "full"
-              ? "Complete"
-              : status === "pending"
-                ? "Pending"
-                : "Empty";
-
-          const borderClass =
-            status === "full"
-              ? "border-2 border-green-500"
-              : status === "pending"
-                ? "border-2 border-yellow-500"
-                : "border-2 border-red-500";
           return (
-            <div
+            <WeekDayCard
               key={date}
-              className={[
-                "rounded-xl border p-4 transition-all duration-200",
-                isSelected
-                  ? "bg-gradient-to-br from-brand-blue/10 to-blue-100/30 shadow-sm"
-                  : "bg-white/80 backdrop-blur-sm hover:shadow-sm",
-                borderClass,
-              ].join(" ")}
-            >
-              <button className="w-full text-left" onClick={() => pickDate(d)}>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                    {d.toLocaleDateString(undefined, { weekday: "short" })}
-                  </div>
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                </div>
-                <div className="mt-2 text-2xl font-black text-gray-900">
-                  {d.getDate()}
-                </div>
-
-                {canReadStats ? (
-                  <div className="mt-3 space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">Total:</span>
-                      <span className="font-black text-gray-900">
-                        {stat?.total ?? 0}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      <div className="text-center rounded bg-blue-50 px-1.5 py-0.5">
-                        <div className="text-[10px] text-blue-700">P</div>
-                        <div className="font-bold text-blue-800">
-                          {stat?.pending ?? 0}
-                        </div>
-                      </div>
-                      <div className="text-center rounded bg-green-50 px-1.5 py-0.5">
-                        <div className="text-[10px] text-green-700">A</div>
-                        <div className="font-bold text-green-800">
-                          {stat?.approved ?? 0}
-                        </div>
-                      </div>
-                      <div className="text-center rounded bg-red-50 px-1.5 py-0.5">
-                        <div className="text-[10px] text-red-700">R</div>
-                        <div className="font-bold text-red-800">
-                          {stat?.rejected ?? 0}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 text-xs text-gray-500">
-                    Stats (No permission)
-                  </div>
-                )}
-              </button>
-
-              {canReadStats ? (
-                <div className="mt-3 flex justify-between items-center gap-2">
-                  <div className="px-2 py-1 text-xs text-gray-700 font-black">
-                    {badge === "Complete" ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : badge === "Pending" ? (
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                    ) : badge === "Empty" ? (
-                      <CircleSlash className="h-4 w-4 text-red-500" />
-                    ) : (
-                      badge
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    icon={<BarChart3 className="h-3 w-3" />}
-                    iconPosition="left"
-                    className="px-2 py-1 text-xs text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                    onClick={() => openStats(date)}
-                    title="Day stats"
-                  >
-                    Info
-                  </Button>
-                </div>
-              ) : null}
-            </div>
+              date={d}
+              dateKey={date}
+              isSelected={date === selectedDate}
+              stat={weekStats[date]}
+              status={weekStatus[date] ?? "empty"}
+              canReadStats={canReadStats}
+              onPick={pickDate}
+              onOpenStats={openStats}
+            />
           );
         })}
       </div>
@@ -963,6 +912,18 @@ export function OtEntryPage() {
             <thead className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white/80">
               <tr className="text-left">
                 <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={
+                      dayItems.filter((x) => x.status === "PENDING").length >
+                        0 &&
+                      selectedIds.length ===
+                        dayItems.filter((x) => x.status === "PENDING").length
+                    }
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
                   Employee
                 </th>
                 <th className="px-5 py-3.5 text-xs font-black uppercase tracking-wider text-gray-700">
@@ -992,242 +953,22 @@ export function OtEntryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {dayView.map(({ it, shiftLabel, n, d, t, total, approved }) => {
-                const dimN = n === "0";
-                const dimD = d === "0";
-                const dimT = t === "0";
-
-                return (
-                  <tr
-                    key={it._id}
-                    className="transition-colors duration-150 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/30"
-                  >
-                    {/* Employee */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue/20 to-blue-100/50">
-                          <User className="h-4 w-4 text-brand-blue" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-black text-gray-900">
-                            {it.employeeId?.empId}
-                          </div>
-                          <div className="truncate text-xs text-gray-600">
-                            {it.employeeId?.name}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Shift */}
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-gray-900">
-                        {shiftLabel}
-                      </div>
-                    </td>
-
-                    {/* In */}
-                    <td className="px-5 py-4">
-                      <div className="font-mono font-semibold text-gray-900">
-                        {it.inTime?.trim() ? (
-                          it.inTime
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Out */}
-                    <td className="px-5 py-4">
-                      <div className="font-mono font-semibold text-gray-900">
-                        {it.outTime?.trim() ? (
-                          it.outTime
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* OT Hours */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-stretch justify-between gap-4 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
-                        <div className="space-y-1 text-xs text-gray-700">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-blue-500" />
-                            <span
-                              className={dimN ? "text-gray-400" : "font-medium"}
-                            >
-                              Normal
-                            </span>
-                            <span
-                              className={
-                                dimN
-                                  ? "text-gray-400"
-                                  : "font-black text-gray-900"
-                              }
-                            >
-                              ({n})
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-green-500" />
-                            <span
-                              className={dimD ? "text-gray-400" : "font-medium"}
-                            >
-                              Double
-                            </span>
-                            <span
-                              className={
-                                dimD
-                                  ? "text-gray-400"
-                                  : "font-black text-gray-900"
-                              }
-                            >
-                              ({d})
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-orange-500" />
-                            <span
-                              className={dimT ? "text-gray-400" : "font-medium"}
-                            >
-                              Triple
-                            </span>
-                            <span
-                              className={
-                                dimT
-                                  ? "text-gray-400"
-                                  : "font-black text-gray-900"
-                              }
-                            >
-                              ({t})
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col justify-center border-l border-gray-200 pl-4 text-right">
-                          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                            Total
-                          </div>
-                          <div className="text-lg font-black leading-none text-gray-900">
-                            {total}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Night */}
-                    <td className="px-5 py-4">
-                      <div
-                        className={[
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
-                          it.isNight
-                            ? "bg-purple-50 text-purple-700"
-                            : "bg-gray-100 text-gray-700",
-                        ].join(" ")}
-                      >
-                        <Moon className="h-3 w-3" />
-                        {it.isNight ? "Yes" : "No"}
-                      </div>
-                    </td>
-
-                    {/* Approved OT */}
-                    <td className="px-5 py-4">
-                      {it.status === "APPROVED" ? (
-                        <div className="font-black text-gray-900">
-                          {approved}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-gray-400">—</div>
-                      )}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-4">
-                      <div
-                        className={[
-                          "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black",
-                          it.status === "PENDING"
-                            ? "bg-blue-50 text-blue-700"
-                            : "",
-                          it.status === "APPROVED"
-                            ? "bg-green-50 text-green-700"
-                            : "",
-                          it.status === "REJECTED"
-                            ? "bg-red-50 text-red-700"
-                            : "",
-                        ].join(" ")}
-                      >
-                        {it.status === "PENDING" && (
-                          <Clock className="h-3 w-3" />
-                        )}
-                        {it.status === "APPROVED" && (
-                          <CheckCircle className="h-3 w-3" />
-                        )}
-                        {it.status === "REJECTED" && (
-                          <XCircle className="h-3 w-3" />
-                        )}
-                        {it.status}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {it.status === "PENDING" && canApprove ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => openApprove(it)}
-                            icon={<CheckCircle className="h-3 w-3" />}
-                            iconPosition="left"
-                            className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                          >
-                            Approve
-                          </Button>
-                        ) : null}
-
-                        {it.status === "PENDING" && canReject ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => openReject(it)}
-                            icon={<XCircle className="h-3 w-3" />}
-                            iconPosition="left"
-                            className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                          >
-                            Reject
-                          </Button>
-                        ) : null}
-
-                        {it.status === "PENDING" && has("ot.update") ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => openEdit(it)}
-                            icon={<Pencil className="h-3 w-3" />}
-                            iconPosition="left"
-                            className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                          >
-                            Edit
-                          </Button>
-                        ) : null}
-
-                        {canReadAudit ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => openAuditForOt(it)}
-                            icon={<Eye className="h-3 w-3" />}
-                            iconPosition="left"
-                            className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                          >
-                            Audit
-                          </Button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {dayItems.map((it) => (
+                <OtEntryRow
+                  key={it._id}
+                  item={it}
+                  canApprove={canApprove}
+                  canReject={canReject}
+                  canReadAudit={canReadAudit}
+                  canUpdate={canUpdate}
+                  onApprove={openApprove}
+                  onReject={openReject}
+                  onEdit={openEdit}
+                  onAudit={openAuditForOt}
+                  isSelected={selectedIds.includes(it._id)}
+                  onToggleSelect={() => toggleRowSelection(it._id)}
+                />
+              ))}
 
               {!dayLoading && dayItems.length === 0 ? (
                 <tr>
@@ -1250,6 +991,326 @@ export function OtEntryPage() {
           </table>
         </div>
       </div>
+
+      {/* Bulk Approve Modal */}
+      <Modal
+        open={bulkApproveOpen}
+        title={`Bulk Approve OT (${bulkRows.length})`}
+        onClose={() => setBulkApproveOpen(false)}
+        className="w-[95vw] max-w-[1280px]"
+        closeOnBackdropClick={false}
+        size="xl"
+      >
+        <div className="flex h-[85vh] min-h-0 flex-col">
+          {" "}
+          {/* Top summary */}
+          <div className="shrink-0 space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-black text-gray-900">
+                    Review before final approval
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600">
+                    Adjust approved OT values if needed, especially for NO_SHIFT
+                    or manually reviewed rows.
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                    Selected: {bulkRows.length}
+                  </div>
+                  <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                    Valid: {bulkRows.filter((r) => r.canApprove).length}
+                  </div>
+                  <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
+                    Review:{" "}
+                    {bulkRows.filter((r) => !r.canApprove || r.warning).length}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Scrollable center */}
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+            {" "}
+            <div className="flex h-full min-h-0 flex-col gap-4">
+              {" "}
+              {/* Table card */}
+              <div className="min-h-0 flex-1 overflow-hidden flex flex-col rounded-xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur-sm">
+                <div className="shrink-0 border-b border-gray-200/60 bg-gradient-to-r from-gray-50 to-white/80 px-5 py-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-black text-gray-900">
+                      Selected OT Entries
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Edit approved hours before confirming
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-auto">
+                  {" "}
+                  <table className="min-w-full text-sm">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200/70 bg-gradient-to-r from-gray-50 to-white/95 backdrop-blur-sm">
+                      <tr className="text-left">
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                          Employee
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                          Shift
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                          In
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                          Out
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-blue-700">
+                          Approved Normal
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-green-700">
+                          Approved Double
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-orange-700">
+                          Approved Triple
+                        </th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                          Review Status
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-gray-100">
+                      {bulkRows.map((r, index) => {
+                        const hasWarning = !!r.warning;
+                        const disabled = !r.canApprove;
+
+                        return (
+                          <tr
+                            key={r.id}
+                            className={`align-top transition-colors ${
+                              disabled
+                                ? "bg-red-50/40"
+                                : hasWarning
+                                  ? "bg-amber-50/40"
+                                  : "bg-white hover:bg-gray-50/60"
+                            }`}
+                          >
+                            <td className="px-4 py-3.5">
+                              <div className="font-black text-gray-900">
+                                {r.employeeLabel}
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500">
+                                Original:{" "}
+                                {[
+                                  r.normalMinutes > 0
+                                    ? `N ${r.normalMinutes / 60}h`
+                                    : null,
+                                  r.doubleMinutes > 0
+                                    ? `D ${r.doubleMinutes / 60}h`
+                                    : null,
+                                  r.tripleMinutes > 0
+                                    ? `T ${r.tripleMinutes / 60}h`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ") || "0h"}
+                              </div>
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                  r.shift === "NO_SHIFT"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {r.shift}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3.5 font-medium text-gray-700">
+                              {r.inTime || "-"}
+                            </td>
+
+                            <td className="px-4 py-3.5 font-medium text-gray-700">
+                              {r.outTime || "-"}
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              <input
+                                type="number"
+                                step="0.25"
+                                min="0"
+                                disabled={disabled}
+                                value={r.approvedNormalMinutes / 60}
+                                onChange={(e) => {
+                                  const val = Math.round(
+                                    Number(e.target.value || 0) * 60,
+                                  );
+                                  setBulkRows((prev) =>
+                                    prev.map((x, i) =>
+                                      i === index
+                                        ? { ...x, approvedNormalMinutes: val }
+                                        : x,
+                                    ),
+                                  );
+                                }}
+                                className="h-10 w-24 rounded-lg border border-blue-200 bg-white px-3 text-sm font-black text-gray-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                              />
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              <input
+                                type="number"
+                                step="0.25"
+                                min="0"
+                                disabled={disabled}
+                                value={r.approvedDoubleMinutes / 60}
+                                onChange={(e) => {
+                                  const val = Math.round(
+                                    Number(e.target.value || 0) * 60,
+                                  );
+                                  setBulkRows((prev) =>
+                                    prev.map((x, i) =>
+                                      i === index
+                                        ? { ...x, approvedDoubleMinutes: val }
+                                        : x,
+                                    ),
+                                  );
+                                }}
+                                className="h-10 w-24 rounded-lg border border-green-200 bg-white px-3 text-sm font-black text-gray-900 shadow-sm outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                              />
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              <input
+                                type="number"
+                                step="0.25"
+                                min="0"
+                                disabled={disabled}
+                                value={r.approvedTripleMinutes / 60}
+                                onChange={(e) => {
+                                  const val = Math.round(
+                                    Number(e.target.value || 0) * 60,
+                                  );
+                                  setBulkRows((prev) =>
+                                    prev.map((x, i) =>
+                                      i === index
+                                        ? { ...x, approvedTripleMinutes: val }
+                                        : x,
+                                    ),
+                                  );
+                                }}
+                                className="h-10 w-24 rounded-lg border border-orange-200 bg-white px-3 text-sm font-black text-gray-900 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                              />
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              {disabled ? (
+                                <div className="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-black text-red-700">
+                                  Manual review required
+                                </div>
+                              ) : hasWarning ? (
+                                <div className="space-y-1">
+                                  <div className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
+                                    Warning
+                                  </div>
+                                  <div className="text-xs font-medium text-amber-800">
+                                    {r.warning}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">
+                                  Ready to approve
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {bulkRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-10 text-center">
+                            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/70 p-8">
+                              <div className="text-sm font-medium text-gray-500">
+                                No rows selected for bulk approval.
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* Reason section */}
+              <div className="shrink-0 rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+                <div className="mb-3">
+                  <div className="text-sm font-black text-gray-900">
+                    Approval Reason
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Optional, but useful for audit tracking when approving in
+                    bulk.
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <SelectField
+                    label="Select reason"
+                    value={bulkApproveReasonId}
+                    onValueChange={setBulkApproveReasonId}
+                    options={[
+                      { label: "Select reason", value: "" },
+                      ...approveReasons.map((r) => ({
+                        label: r.label,
+                        value: r._id,
+                      })),
+                    ]}
+                  />
+
+                  <Input
+                    label="Or type custom reason"
+                    value={bulkApproveReasonText}
+                    onChange={(e) => setBulkApproveReasonText(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Fixed footer */}
+          <div className="mt-4 shrink-0 border-t border-gray-100 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                Rows marked with warnings should be checked carefully before
+                approval.
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setBulkApproveOpen(false)}
+                  className="border border-gray-300 bg-white font-black text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  onClick={confirmBulkApprove}
+                  className="rounded-lg border border-brand-blue bg-gradient-to-r from-brand-blue to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow"
+                >
+                  Confirm Bulk Approve
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* Create bulk modal */}
       <Modal
@@ -1293,191 +1354,20 @@ export function OtEntryPage() {
           ) : null}
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-            {createRows.map((r, i) => {
-              const p = createPreview[i];
-              const totalMins =
-                p.normalMinutes + p.doubleMinutes + p.tripleMinutes;
-              const isNoShift = r.shift === "NO_SHIFT";
-
-              return (
-                <div
-                  key={i}
-                  className="rounded-xl border border-gray-200 bg-gray-50/50 p-4"
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-                    {/* Employee */}
-                    <div className="md:col-span-4">
-                      <SelectField
-                        label="Employee"
-                        value={r.employeeId}
-                        onValueChange={(v) => setRow(i, { employeeId: v })}
-                        options={[
-                          {
-                            label: "Select employee",
-                            value: "",
-                            disabled: true,
-                          },
-                          ...employees.map((e) => ({
-                            label: `${e.empId} - ${e.name}`,
-                            value: e._id,
-                          })),
-                        ]}
-                      />
-                    </div>
-
-                    {/* Shift */}
-                    <div className="md:col-span-2">
-                      <SelectField
-                        label="Shift"
-                        value={r.shift}
-                        onValueChange={(v) => {
-                          if (v === "NO_SHIFT")
-                            setRow(i, { shift: v, inTime: "", outTime: "" });
-                          else setRow(i, { shift: v });
-                        }}
-                        options={SHIFTS.map((s) => ({
-                          label: s.label,
-                          value: s.value,
-                        }))}
-                      />
-                    </div>
-
-                    {/* In */}
-                    <div className="md:col-span-2">
-                      <Input
-                        label="In Time"
-                        type="time"
-                        value={r.inTime}
-                        disabled={isNoShift}
-                        onChange={(e) => setRow(i, { inTime: e.target.value })}
-                        className="border-gray-300"
-                      />
-                    </div>
-
-                    {/* Out */}
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Out Time"
-                        type="time"
-                        value={r.outTime}
-                        disabled={isNoShift}
-                        onChange={(e) => setRow(i, { outTime: e.target.value })}
-                        className="border-gray-300"
-                      />
-                    </div>
-
-                    {/* Reason */}
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Reason"
-                        value={r.reason || ""}
-                        onChange={(e) => setRow(i, { reason: e.target.value })}
-                        className="border-gray-300"
-                        placeholder="Optional"
-                      />
-                    </div>
-
-                    {/* Preview (placed after inputs = nicer UX) */}
-                    {isNoShift ? (
-                      <div className="text-xs text-gray-500">
-                        No shift selected
-                      </div>
-                    ) : (
-                      <div className="md:col-span-12">
-                        <div className="rounded-lg border border-gray-200 bg-white/70 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-xs font-black text-gray-700">
-                              Preview OT
-                            </div>
-
-                            {p.isNight ? (
-                              <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-black text-purple-700">
-                                Night
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-black text-gray-600">
-                                Day
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <div className="rounded bg-blue-50 p-2">
-                              <div className="text-[10px] font-black text-blue-700">
-                                Normal
-                              </div>
-                              <div className="text-sm font-black text-blue-900">
-                                {minsToHours(p.normalMinutes)}h
-                              </div>
-                              <div className="text-[10px] text-blue-700/80">
-                                {p.normalMinutes} min
-                              </div>
-                            </div>
-
-                            <div className="rounded bg-green-50 p-2">
-                              <div className="text-[10px] font-black text-green-700">
-                                Double
-                              </div>
-                              <div className="text-sm font-black text-green-900">
-                                {minsToHours(p.doubleMinutes)}h
-                              </div>
-                              <div className="text-[10px] text-green-700/80">
-                                {p.doubleMinutes} min
-                              </div>
-                            </div>
-
-                            <div className="rounded bg-orange-50 p-2">
-                              <div className="text-[10px] font-black text-orange-700">
-                                Triple
-                              </div>
-                              <div className="text-sm font-black text-orange-900">
-                                {minsToHours(p.tripleMinutes)}h
-                              </div>
-                              <div className="text-[10px] text-orange-700/80">
-                                {p.tripleMinutes} min
-                              </div>
-                            </div>
-
-                            <div className="rounded bg-gray-50 p-2">
-                              <div className="text-[10px] font-black text-gray-700">
-                                Total
-                              </div>
-                              <div className="text-sm font-black text-gray-900">
-                                {minsToHours(totalMins)}h
-                              </div>
-                              <div className="text-[10px] text-gray-700/80">
-                                {totalMins} min
-                              </div>
-                            </div>
-                          </div>
-
-                          {!r.inTime || !r.outTime ? (
-                            <div className="mt-2 text-[11px] text-gray-500">
-                              Enter in/out time to preview OT (rounded down to
-                              15 mins).
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="md:col-span-12 flex justify-end gap-2">
-                      {createRows.length > 1 ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => removeCreateRow(i)}
-                          icon={<Trash2 className="h-3 w-3" />}
-                          iconPosition="left"
-                          className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
-                        >
-                          Remove
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {createRows.map((r, i) => (
+              <CreateOtRow
+                key={r.id}
+                index={i}
+                row={r}
+                selectedDate={selectedDate}
+                isTripleDay={isTripleDay}
+                employeeOptions={employeeOptions}
+                shiftOptions={shiftOptions}
+                canRemove={createRows.length > 1}
+                onChangeRow={setRow}
+                onRemoveRow={removeCreateRow}
+              />
+            ))}
           </div>
 
           {/* Footer */}
@@ -1753,22 +1643,28 @@ export function OtEntryPage() {
         <Input
           label="Approved Normal"
           type="number"
-          value={minsToHours(approvedN)}
-          onChange={(e) => setApprovedN(Number(e.target.value))}
+          value={approvedN / 60}
+          onChange={(e) =>
+            setApprovedN(Math.round(Number(e.target.value || 0) * 60))
+          }
         />
 
         <Input
           label="Approved Double"
           type="number"
-          value={minsToHours(approvedD)}
-          onChange={(e) => setApprovedD(Number(e.target.value))}
+          value={approvedD / 60}
+          onChange={(e) =>
+            setApprovedD(Math.round(Number(e.target.value || 0) * 60))
+          }
         />
 
         <Input
           label="Approved Triple"
           type="number"
-          value={minsToHours(approvedT)}
-          onChange={(e) => setApprovedT(Number(e.target.value))}
+          value={approvedT / 60}
+          onChange={(e) =>
+            setApprovedT(Math.round(Number(e.target.value || 0) * 60))
+          }
         />
         <div className="space-y-4">
           <SelectField
