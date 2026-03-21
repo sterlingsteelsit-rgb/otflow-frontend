@@ -122,10 +122,9 @@ export function AdminConfigPage() {
           <Button
             onClick={() => setOpenCreate(true)}
             variant="ghost"
-            icon={<Plus className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <Plus className="h-4 w-4" />
             Create Role
           </Button>
         </div>
@@ -201,11 +200,10 @@ export function AdminConfigPage() {
               <Button
                 onClick={saveSelected}
                 variant="ghost"
-                icon={<Save className="h-4 w-4" />}
-                iconPosition="left"
                 className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                 disabled={saving}
               >
+                <Save className="h-4 w-4" />
                 {saving ? (
                   <span className="flex items-center gap-2">
                     <RefreshCw className="h-3 w-3 animate-spin" />
@@ -329,7 +327,6 @@ export function AdminConfigPage() {
             <Button
               variant="ghost"
               onClick={() => setOpenCreate(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel

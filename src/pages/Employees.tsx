@@ -171,10 +171,9 @@ export function EmployeesPage() {
           <Button
             onClick={openCreate}
             variant="ghost"
-            icon={<UserPlus className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <UserPlus className="h-4 w-4" />
             Create Employee
           </Button>
         ) : null}
@@ -194,11 +193,10 @@ export function EmployeesPage() {
           <div className="flex items-end">
             <Button
               variant="ghost"
-              icon={<Search className="h-4 w-4" />}
-              iconPosition="left"
               className="w-full text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               onClick={onSearch}
             >
+              <Search className="h-4 w-4" />
               Search
             </Button>
           </div>
@@ -325,10 +323,9 @@ export function EmployeesPage() {
                           onClick={() => openEdit(emp)}
                           disabled={!!emp.isDeleted}
                           title={emp.isDeleted ? "Restore to edit" : "Edit"}
-                          icon={<Edit2 className="h-3 w-3" />}
-                          iconPosition="left"
                           className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
+                          <Edit2 className="h-3 w-3" />
                           Edit
                         </Button>
                       ) : null}
@@ -337,10 +334,9 @@ export function EmployeesPage() {
                         <Button
                           variant="ghost"
                           onClick={() => delEmp(emp)}
-                          icon={<Trash2 className="h-3 w-3" />}
-                          iconPosition="left"
                           className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                         >
+                          <Trash2 className="h-3 w-3" />
                           Delete
                         </Button>
                       ) : null}
@@ -349,10 +345,9 @@ export function EmployeesPage() {
                         <Button
                           variant="ghost"
                           onClick={() => restoreEmp(emp)}
-                          icon={<Undo className="h-3 w-3" />}
-                          iconPosition="left"
                           className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                         >
+                          <Undo className="h-3 w-3" />
                           Restore
                         </Button>
                       ) : null}
@@ -396,10 +391,9 @@ export function EmployeesPage() {
               variant="ghost"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              icon={<ChevronLeft className="h-4 w-4" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
 
@@ -407,10 +401,9 @@ export function EmployeesPage() {
               variant="ghost"
               disabled={page >= pages}
               onClick={() => setPage((p) => p + 1)}
-              icon={<ChevronRight className="h-4 w-4" />}
-              iconPosition="right"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <ChevronRight className="h-4 w-4" />
               Next
             </Button>
           </div>
@@ -449,7 +442,6 @@ export function EmployeesPage() {
               <Button
                 variant="ghost"
                 onClick={() => setShowOptional((v) => !v)}
-                iconPosition="left"
                 className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               >
                 {showOptional ? "Hide" : "Add email"}
@@ -475,7 +467,6 @@ export function EmployeesPage() {
             <Button
               variant="ghost"
               onClick={() => setOpen(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel

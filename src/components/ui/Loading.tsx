@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 export interface LoadingProps {
-  variant?: "spinner" | "dots";
+  variant?: "spinner" | "dots" | "success";
   size?: "small" | "medium" | "large";
   color?: string;
   className?: string;
@@ -46,6 +46,25 @@ const Spinner = React.memo(function Spinner({ sizePx, color }: SpinnerProps) {
       animate={{ rotate: 360 }}
       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
     />
+  );
+});
+
+const Success = React.memo(function Success({ sizePx, color }: SpinnerProps) {
+  return (
+    <motion.div
+      className="flex items-center justify-center rounded-full"
+      style={{
+        width: sizePx,
+        height: sizePx,
+        border: `3px solid ${color}`,
+        color,
+      }}
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
+      <span style={{ fontSize: sizePx * 0.45, fontWeight: 700 }}>✓</span>
+    </motion.div>
   );
 });
 
@@ -184,6 +203,10 @@ const Loading: React.FC<LoadingProps> = ({
   const loaderNode = useMemo(() => {
     if (variant === "dots") {
       return <Dots dotPx={dotPx} boxPx={spinnerPx} color={color} />;
+    }
+
+    if (variant === "success") {
+      return <Success sizePx={spinnerPx} color={color} />;
     }
 
     return <Spinner sizePx={spinnerPx} color={color} />;

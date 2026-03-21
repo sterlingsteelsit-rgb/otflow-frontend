@@ -630,25 +630,19 @@ export default function AuditLogsPage() {
           <Button
             variant="ghost"
             onClick={exportToExcel}
-            icon={<Download className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             disabled={exporting || items.length === 0}
           >
+            <Download className="h-4 w-4" />
             {exporting ? "Exporting..." : "Export Excel"}
           </Button>
           <Button
             variant="ghost"
             onClick={load}
-            icon={
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />
-            }
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             disabled={loading}
           >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
@@ -785,10 +779,9 @@ export default function AuditLogsPage() {
                 setPage(1);
                 setTimeout(load, 100);
               }}
-              icon={<Filter className="h-4 w-4" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Filter className="h-4 w-4" />
               Clear Filters
             </Button>
             <Button
@@ -797,11 +790,10 @@ export default function AuditLogsPage() {
                 setPage(1);
                 load();
               }}
-              icon={<Search className="h-4 w-4" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               disabled={loading}
             >
+              <Search className="h-4 w-4" />
               Search
             </Button>
           </div>
@@ -934,10 +926,9 @@ export default function AuditLogsPage() {
                       <Button
                         variant="ghost"
                         onClick={() => openDetailModal(a)}
-                        icon={<Info className="h-3 w-3" />}
-                        iconPosition="left"
                         className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                       >
+                        <Info className="h-3 w-3" />
                         Details
                       </Button>
                     </div>
@@ -975,10 +966,9 @@ export default function AuditLogsPage() {
             variant="ghost"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            icon={<ChevronLeft className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
           <div className="text-xs text-gray-600">
@@ -989,10 +979,9 @@ export default function AuditLogsPage() {
             variant="ghost"
             disabled={page >= pages}
             onClick={() => setPage((p) => p + 1)}
-            icon={<ChevronRight className="h-4 w-4" />}
-            iconPosition="right"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <ChevronRight className="h-4 w-4" />
             Next
           </Button>
         </div>
@@ -1092,10 +1081,11 @@ export default function AuditLogsPage() {
                                 selectedLog.actorUserId?._id || "",
                               )
                             }
-                            icon={<Copy className="h-3 w-3" />}
                             className="h-5 w-5 p-0 min-h-0"
                             title="Copy User ID"
-                          />
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -1125,10 +1115,11 @@ export default function AuditLogsPage() {
                         <Button
                           variant="ghost"
                           onClick={() => copyToClipboard(selectedLog.entityId)}
-                          icon={<Copy className="h-3 w-3" />}
                           className="h-5 w-5 p-0 min-h-0"
                           title="Copy Entity ID"
-                        />
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
@@ -1140,10 +1131,11 @@ export default function AuditLogsPage() {
                         <Button
                           variant="ghost"
                           onClick={() => copyToClipboard(selectedLog._id)}
-                          icon={<Copy className="h-3 w-3" />}
                           className="h-5 w-5 p-0 min-h-0"
                           title="Copy Log ID"
-                        />
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -1192,10 +1184,9 @@ export default function AuditLogsPage() {
                 onClick={() =>
                   copyToClipboard(JSON.stringify(selectedLog, null, 2))
                 }
-                icon={<Copy className="h-4 w-4" />}
-                iconPosition="left"
                 className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               >
+                <Copy className="h-4 w-4" />
                 Copy JSON
               </Button>
               <Button

@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./auth/AuthContext";
-import type { JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import Loading from "./components/ui/Loading";
 
 // Pages
@@ -19,15 +20,47 @@ import FingerPrintLogFormatter from "./pages/utils/LogsUploader";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
-  if (state.loading)
+
+  const [phase, setPhase] = useState<
+    "loading" | "success" | "redirect" | "done"
+  >("loading");
+
+  useEffect(() => {
+    if (state.loading) {
+      setPhase("loading");
+      return;
+    }
+
+    const nextPhase = state.user ? "success" : "redirect";
+    setPhase(nextPhase);
+
+    const timeout = setTimeout(() => {
+      setPhase("done");
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [state.loading, state.user]);
+
+  if (state.loading || phase !== "done") {
+    const currentPhase = state.loading ? "loading" : phase;
+
     return (
       <Loading
         center="screen"
-        text="Communicating with the server..."
-        typewriter
-        repeat
+        text={
+          currentPhase === "loading"
+            ? "Connecting you to the server..."
+            : currentPhase === "success"
+              ? "Connection established."
+              : "Redirecting to login..."
+        }
+        variant={currentPhase === "success" ? "success" : "spinner"}
+        typewriter={currentPhase === "loading"}
+        repeat={false}
       />
     );
+  }
+
   if (!state.user) return <Navigate to="/login" replace />;
   return children;
 }

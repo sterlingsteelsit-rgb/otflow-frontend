@@ -21,16 +21,15 @@ import {
   MessageSquareText,
   Key,
   LogOut,
-  Menu,
-  X,
-  Bell,
   Fingerprint,
 } from "lucide-react";
+import { Menu } from "@/components/animate-ui/icons/menu";
 import { usePendingNotifications } from "../../hooks/usePendingNotifications";
 import { Portal } from "./Portal";
 import { api } from "../../api/client";
 import Loading from "../ui/Loading";
 import { formatMmSs } from "../../utils/getJwtExp";
+import { BellRing } from "../animate-ui/icons/bell-ring";
 
 type SidebarMode = "full" | "hidden";
 
@@ -323,10 +322,12 @@ export function AppShell() {
                   "border border-gray-200 hover:border-gray-300 hover:shadow-sm",
                 )}
                 onClick={() => setSettingsOpen((o) => !o)}
-                icon={<Settings className="h-4 w-4" />}
               >
                 {mode === "full" && (
-                  <span className="font-medium tracking-tight">Settings</span>
+                  <>
+                    <Settings />
+                    <span className="font-medium tracking-tight">Settings</span>
+                  </>
                 )}
               </Button>
 
@@ -392,10 +393,12 @@ export function AppShell() {
                   "border border-red-200 hover:border-red-300 hover:shadow-sm",
                 )}
                 onClick={() => logout("MANUAL")}
-                icon={<LogOut className="h-4 w-4" />}
               >
                 {mode === "full" && (
-                  <span className="font-medium tracking-tight">Logout</span>
+                  <>
+                    <LogOut />
+                    <span className="font-medium tracking-tight">Logout</span>
+                  </>
                 )}
               </Button>
             </div>
@@ -412,76 +415,49 @@ export function AppShell() {
                   setMode((m) => (m === "full" ? "hidden" : "full"))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
-                icon={
-                  mode === "full" ? (
-                    <Menu className="h-4 w-4" />
-                  ) : (
-                    <X className="h-4 w-4" />
-                  )
-                }
               >
-                {mode === "full" ? "" : ""}
+                <Menu
+                  className="h-5 w-5"
+                  animate={mode === "full" ? "default" : undefined}
+                />
               </Button>
 
-              <div className="flex items-center gap-3 border px-4 py-2 rounded-lg border-gray-300 bg-white shadow-sm">
-                <div className="text-sm text-gray-600">
-                  Role:{" "}
-                  <span className="font-semibold text-gray-900 px-2 py-1 bg-gray-100 rounded-md flex items-center gap-1.5">
-                    <Shield className="h-3 w-3" />
-                    {state.user?.role.name}
-                  </span>
-                </div>
-                <div className="h-4 w-px bg-gray-300"></div>
-                <div className="text-sm text-gray-600">
-                  Status:{" "}
-                  <span className="font-semibold text-green-600 px-2 py-1 bg-green-50 rounded-md flex items-center gap-1.5">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    Online
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 border px-2 py-1.5 rounded-md border-gray-300 bg-white shadow-sm">
+                <Shield className="h-4 w-4 text-gray-700" />
+                <div className="h-2 w-2 rounded-full bg-green-500" />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 border px-4 py-2 rounded-lg border-gray-300 bg-white shadow-sm">
-              <div className="text-sm text-gray-600 whitespace-nowrap">
-                Session:{" "}
-                <span className="font-semibold text-gray-900 px-2 py-1 bg-gray-100 rounded-md">
-                  {formatMmSs(remainingSec)}
-                </span>
-              </div>
-              <div className="h-4 w-px bg-gray-300"></div>
-              <div className="text-sm text-gray-600 whitespace-nowrap">
-                Expires:{" "}
-                <span className="font-semibold text-amber-600 px-2 py-1 bg-amber-50 rounded-md">
-                  {expiryText}
-                </span>
-              </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-800 font-medium">
+                {formatMmSs(remainingSec)}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 font-medium">
+                {expiryText}
+              </span>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="relative">
-                <motion.div
-                  animate={{ rotate: [-4, 4, -4] }}
-                  transition={{
-                    duration: 0.5,
-                    ease: "easeInOut",
-                    repeat: Infinity,
+                <Button
+                  variant="ghost"
+                  className="relative rounded-full p-2 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 shadow-sm transition-all"
+                  onClick={() => {
+                    if (!canSeeNotifs) return;
+                    setNotifOpen((v) => !v);
                   }}
                 >
-                  <Button
-                    variant="ghost"
-                    className="rounded-full p-2 hover:bg-gray-100 relative"
-                    onClick={() => {
-                      if (!canSeeNotifs) return;
-                      setNotifOpen((v) => !v);
-                    }}
-                    icon={<Bell className="h-5 w-5 text-gray-600" />}
+                  <BellRing
+                    className="h-5 w-5 text-gray-700"
+                    animate={count > 0 ? "default" : undefined}
+                    loop={true}
                   />
-                </motion.div>
+                </Button>
 
                 {canSeeNotifs && count > 0 ? (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-blue text-white text-[10px] font-bold flex items-center justify-center">
-                    {count > 99 ? "99+" : count}
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-brand-blue opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-brand-blue ring-2 ring-white" />
                   </span>
                 ) : null}
 

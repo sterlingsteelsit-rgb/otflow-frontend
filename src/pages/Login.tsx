@@ -6,8 +6,9 @@ import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogIn, User, AlertCircle } from "lucide-react";
+import { User, AlertCircle } from "lucide-react";
 import SessionExpiredLoginNotice from "../components/ui/SessionExpiredLoginNotice";
+import { LogIn } from "@/components/animate-ui/icons/log-in";
 
 const schema = z.object({
   email: z.string().email(),
@@ -79,11 +80,10 @@ export function LoginPage() {
               <Button
                 type="submit"
                 variant="ghost"
-                icon={<LogIn className="h-4 w-4" />}
-                iconPosition="left"
                 className="w-full text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                 disabled={isSubmitting}
               >
+                {!isSubmitting && <LogIn className="h-4 w-4" />}
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>

@@ -125,12 +125,11 @@ function WeekDayCardComponent({
 
           <Button
             variant="ghost"
-            icon={<BarChart3 className="h-3 w-3" />}
-            iconPosition="left"
             className="px-2 py-1 text-xs text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             onClick={() => onOpenStats(dateKey)}
             title="Day stats"
           >
+            <BarChart3 className="h-3 w-3" />
             Info
           </Button>
         </div>

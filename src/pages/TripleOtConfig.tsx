@@ -121,10 +121,9 @@ export function TripleOtConfigPage() {
           <Button
             onClick={openAdd}
             variant="ghost"
-            icon={<Plus className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <Plus className="h-4 w-4" />
             Add Date
           </Button>
         ) : null}
@@ -227,10 +226,9 @@ export function TripleOtConfigPage() {
                       <Button
                         variant="ghost"
                         onClick={() => del(r)}
-                        icon={<Trash2 className="h-3 w-3" />}
-                        iconPosition="left"
                         className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                       >
+                        <Trash2 className="h-3 w-3" />
                         Delete
                       </Button>
                     ) : null}
@@ -283,7 +281,6 @@ export function TripleOtConfigPage() {
             <Button
               variant="ghost"
               onClick={() => setOpen(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel

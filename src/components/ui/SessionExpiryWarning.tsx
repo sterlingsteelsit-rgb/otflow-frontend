@@ -102,10 +102,9 @@ export default function SessionExpiryWarning() {
 
                 <Button
                   onClick={reloadApp}
-                  icon={<RefreshCw className="h-4 w-4" />}
-                  iconPosition="left"
                   className="rounded-lg border border-orange-600 bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-black text-white shadow-sm transition-all hover:from-orange-600 hover:to-orange-700 hover:shadow"
                 >
+                  <RefreshCw className="h-4 w-4" />
                   Save & Reload
                 </Button>
               </div>

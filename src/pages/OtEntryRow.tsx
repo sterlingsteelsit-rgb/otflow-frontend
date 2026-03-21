@@ -211,10 +211,9 @@ function OtEntryRowComponent({
             <Button
               variant="ghost"
               onClick={() => onApprove(item)}
-              icon={<CheckCircle className="h-3 w-3" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <CheckCircle className="h-3 w-3" />
               Approve
             </Button>
           ) : null}
@@ -223,10 +222,9 @@ function OtEntryRowComponent({
             <Button
               variant="ghost"
               onClick={() => onReject(item)}
-              icon={<XCircle className="h-3 w-3" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <XCircle className="h-3 w-3" />
               Reject
             </Button>
           ) : null}
@@ -235,10 +233,9 @@ function OtEntryRowComponent({
             <Button
               variant="ghost"
               onClick={() => onEdit(item)}
-              icon={<Pencil className="h-3 w-3" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Pencil className="h-3 w-3" />
               Edit
             </Button>
           ) : null}
@@ -247,10 +244,9 @@ function OtEntryRowComponent({
             <Button
               variant="ghost"
               onClick={() => onAudit(item)}
-              icon={<Eye className="h-3 w-3" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Eye className="h-3 w-3" />
               Audit
             </Button>
           ) : null}

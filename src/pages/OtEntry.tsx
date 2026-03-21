@@ -15,6 +15,7 @@ import {
   Clock,
   Eye,
   RefreshCw,
+  TicketCheck,
 } from "lucide-react";
 import StatsModal from "../components/modals/StatsModal";
 import {
@@ -820,19 +821,17 @@ export function OtEntryPage() {
           <Button
             variant="ghost"
             onClick={prevWeek}
-            icon={<ChevronLeft className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <ChevronLeft className="h-4 w-4" />
             Prev Week
           </Button>
           <Button
             variant="ghost"
             onClick={nextWeek}
-            icon={<ChevronRight className="h-4 w-4" />}
-            iconPosition="right"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <ChevronRight className="h-4 w-4" />
             Next Week
           </Button>
 
@@ -843,7 +842,8 @@ export function OtEntryPage() {
                 variant="ghost"
                 className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
               >
-                Bulk Approve ({selectedRows.length})
+                <TicketCheck className="h-4 w-4" />
+                Bulk Approve | {selectedRows.length}
               </Button>
             </div>
           ) : null}
@@ -855,10 +855,9 @@ export function OtEntryPage() {
                 setCreateOpen(true);
               }}
               variant="ghost"
-              icon={<Plus className="h-4 w-4" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Plus className="h-4 w-4" />
               Add OT
             </Button>
           ) : null}
@@ -1375,10 +1374,9 @@ export function OtEntryPage() {
             <Button
               variant="ghost"
               onClick={addCreateRow}
-              icon={<Plus className="h-4 w-4" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Plus className="h-4 w-4" />
               Add Row
             </Button>
 
@@ -1686,7 +1684,6 @@ export function OtEntryPage() {
             <Button
               variant="ghost"
               onClick={() => setApproveOpen(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel

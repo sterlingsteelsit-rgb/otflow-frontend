@@ -198,11 +198,9 @@ export function UsersPage() {
           <Button
             onClick={openCreate}
             variant="ghost"
-            icon={<UserPlus className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
-            Create User
+            <UserPlus className="h-4 w-4" /> Create User
           </Button>
         ) : null}
       </div>
@@ -375,8 +373,8 @@ export function UsersPage() {
                                 disabled={isProtected}
                                 title={disabledReason}
                                 className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                                icon={<Edit2 className="h-3 w-3" />}
                               >
+                                <Edit2 className="h-3 w-3" />
                                 Edit
                               </Button>
                             ) : null}
@@ -400,8 +398,8 @@ export function UsersPage() {
                                 disabled={isProtected || isSelf}
                                 title={disabledReason}
                                 className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                                icon={<Key className="h-3 w-3" />}
                               >
+                                <Key className="h-3 w-3" />
                                 Reset PW
                               </Button>
                             ) : null}

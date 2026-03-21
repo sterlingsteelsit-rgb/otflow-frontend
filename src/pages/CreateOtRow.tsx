@@ -230,10 +230,9 @@ function CreateOtRowComponent({
             <Button
               variant="ghost"
               onClick={() => onRemoveRow(index)}
-              icon={<Trash2 className="h-3 w-3" />}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
+              <Trash2 className="h-3 w-3" />
               Remove
             </Button>
           ) : null}

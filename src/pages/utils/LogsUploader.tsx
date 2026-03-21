@@ -97,17 +97,12 @@ export default function LogsUploaderPage() {
         </div>
 
         {/* Toggle Type Column */}
-        <Button
-          variant="ghost"
-          icon={
-            showType ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )
-          }
-          onClick={() => setShowType((v) => !v)}
-        >
+        <Button variant="ghost" onClick={() => setShowType((v) => !v)}>
+          {showType ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
           {showType ? "Hide Type" : "Show Type"}
         </Button>
       </div>
@@ -127,10 +122,9 @@ export default function LogsUploaderPage() {
           <Button
             disabled={!csv || loading}
             onClick={downloadCSV}
-            icon={<Download className="h-4 w-4" />}
-            iconPosition="left"
             className="border border-green-600 bg-green-500 text-white hover:bg-green-600"
           >
+            <Download className="h-4 w-4" />
             Download CSV
           </Button>
         </div>

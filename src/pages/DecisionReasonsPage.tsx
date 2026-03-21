@@ -224,10 +224,9 @@ export function DecisionReasonsPage() {
           <Button
             onClick={openCreate}
             variant="ghost"
-            icon={<Plus className="h-4 w-4" />}
-            iconPosition="left"
             className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
           >
+            <Plus className="h-4 w-4" />
             Add Reason
           </Button>
         ) : null}
@@ -243,14 +242,13 @@ export function DecisionReasonsPage() {
               key={t.value}
               onClick={() => setActiveTab(t.value)}
               variant={is ? "ghost" : "ghost"}
-              icon={<Icon className="h-4 w-4" />}
-              iconPosition="left"
               className={`font-black border ${
                 is
                   ? "border-brand-blue bg-gradient-to-r from-brand-blue/10 to-blue-100/30 text-brand-blue"
                   : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
+              <Icon className="h-4 w-4" />
               {t.label}
             </Button>
           );
@@ -362,10 +360,9 @@ export function DecisionReasonsPage() {
                         <Button
                           variant="ghost"
                           onClick={() => openEdit(r)}
-                          icon={<Edit2 className="h-3 w-3" />}
-                          iconPosition="left"
                           className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                         >
+                          <Edit2 className="h-3 w-3" />
                           Edit
                         </Button>
                       ) : null}
@@ -375,16 +372,13 @@ export function DecisionReasonsPage() {
                           variant="ghost"
                           onClick={() => toggleActive(r)}
                           title="Enable/Disable"
-                          icon={
-                            r.active ? (
-                              <ToggleLeft className="h-3 w-3" />
-                            ) : (
-                              <ToggleRight className="h-3 w-3" />
-                            )
-                          }
-                          iconPosition="left"
                           className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
                         >
+                          {r.active ? (
+                            <ToggleLeft className="h-3 w-3" />
+                          ) : (
+                            <ToggleRight className="h-3 w-3" />
+                          )}
                           {r.active ? "Disable" : "Enable"}
                         </Button>
                       ) : null}
@@ -393,10 +387,9 @@ export function DecisionReasonsPage() {
                         <Button
                           variant="ghost"
                           onClick={() => remove(r)}
-                          icon={<Trash2 className="h-3 w-3" />}
-                          iconPosition="left"
                           className="text-red-700 font-black border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300"
                         >
+                          <Trash2 className="h-3 w-3" />
                           Delete
                         </Button>
                       ) : null}
@@ -486,7 +479,6 @@ export function DecisionReasonsPage() {
             <Button
               variant="ghost"
               onClick={() => setModalOpen(false)}
-              iconPosition="left"
               className="text-gray-700 font-black border border-gray-300 bg-white hover:bg-gray-50"
             >
               Cancel

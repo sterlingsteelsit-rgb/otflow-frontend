@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Button } from "../components/ui/Button";
 import {
   ResponsiveContainer,
   BarChart,
@@ -310,20 +309,20 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {loading ? (
-            <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700">
+        <div className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2 py-1 shadow-sm">
+          {loading && (
+            <>
               <Loading variant="dots" />
-            </div>
-          ) : null}
-          <Button
-            variant="ghost"
+              <div className="mx-1 h-4 w-px bg-gray-200" />
+            </>
+          )}
+
+          <button
             onClick={loadDashboard}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 hover:shadow"
-            icon={<RefreshCw className="h-4 w-4" />}
+            className="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
           >
-            Refresh
-          </Button>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 

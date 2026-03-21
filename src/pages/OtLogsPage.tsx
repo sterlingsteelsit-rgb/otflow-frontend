@@ -264,13 +264,12 @@ export default function OtLogsPage() {
         <Button
           variant="ghost"
           className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-          icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
-          iconPosition="left"
           onClick={() =>
             setAnchor((a) => toYYYYMMDD(addWeeks(parseYYYYMMDD(a), -1)))
           }
           title="Previous week"
         >
+          <ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />
           <span className="hidden sm:inline">Prev</span>
           <span className="sm:hidden">‹</span>
         </Button>
@@ -289,13 +288,12 @@ export default function OtLogsPage() {
         <Button
           variant="ghost"
           className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-          icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
-          iconPosition="right"
           onClick={() =>
             setAnchor((a) => toYYYYMMDD(addWeeks(parseYYYYMMDD(a), 1)))
           }
           title="Next week"
         >
+          <ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />
           <span className="hidden sm:inline">Next</span>
           <span className="sm:hidden">›</span>
         </Button>
@@ -318,8 +316,6 @@ export default function OtLogsPage() {
       <Button
         variant="ghost"
         className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-        icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
-        iconPosition="left"
         onClick={() => {
           const d = parseYYYYMMDD(anchor);
           const prev = addMonths(d, -1);
@@ -327,6 +323,7 @@ export default function OtLogsPage() {
         }}
         title="Previous month"
       >
+        <ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />
         <span className="hidden sm:inline">Prev</span>
         <span className="sm:hidden">‹</span>
       </Button>
@@ -345,8 +342,6 @@ export default function OtLogsPage() {
       <Button
         variant="ghost"
         className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-        icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
-        iconPosition="right"
         onClick={() => {
           const d = parseYYYYMMDD(anchor);
           const next = addMonths(d, 1);
@@ -354,6 +349,7 @@ export default function OtLogsPage() {
         }}
         title="Next month"
       >
+        <ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />
         <span className="hidden sm:inline">Next</span>
         <span className="sm:hidden">›</span>
       </Button>
@@ -365,8 +361,6 @@ export default function OtLogsPage() {
       <Button
         variant="ghost"
         className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-        icon={<ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />}
-        iconPosition="left"
         onClick={() => {
           const d = parseYYYYMMDD(anchor);
           const prev = addYears(d, -1);
@@ -374,6 +368,7 @@ export default function OtLogsPage() {
         }}
         title="Previous year"
       >
+        <ChevronLeft className="h-3 sm:h-4 w-3 sm:w-4" />
         <span className="hidden sm:inline">Prev</span>
         <span className="sm:hidden">‹</span>
       </Button>
@@ -394,8 +389,6 @@ export default function OtLogsPage() {
       <Button
         variant="ghost"
         className="border border-gray-300 bg-white hover:bg-gray-50 min-w-[40px] sm:min-w-[84px] px-2 sm:px-3"
-        icon={<ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />}
-        iconPosition="right"
         onClick={() => {
           const d = parseYYYYMMDD(anchor);
           const next = addYears(d, 1);
@@ -403,6 +396,7 @@ export default function OtLogsPage() {
         }}
         title="Next year"
       >
+        <ChevronRight className="h-3 sm:h-4 w-3 sm:w-4" />
         <span className="hidden sm:inline">Next</span>
         <span className="sm:hidden">›</span>
       </Button>
@@ -644,19 +638,21 @@ export default function OtLogsPage() {
             <div className="flex items-end h-full">
               <div className="flex gap-1 sm:gap-2 w-full">
                 <Button
-                  variant={view === "records" ? "primary" : "ghost"}
-                  icon={<List className="h-4 w-4" />}
+                  variant={view === "records" ? "link" : "ghost"}
                   onClick={() => setView("records")}
                   className="flex-1 min-w-0 p-2 border"
                   title="Records view"
-                />
+                >
+                  <List className="h-4 w-4" />
+                </Button>
                 <Button
-                  variant={view === "summary" ? "primary" : "ghost"}
-                  icon={<BarChart3 className="h-4 w-4" />}
+                  variant={view === "summary" ? "link" : "ghost"}
                   onClick={() => setView("summary")}
                   className="flex-1 min-w-0 p-2 border"
                   title="Summary view"
-                />
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -692,26 +688,22 @@ export default function OtLogsPage() {
             <Button
               variant="ghost"
               className="border border-gray-300 bg-white hover:bg-gray-50 text-xs sm:text-sm px-2 sm:px-4"
-              icon={
-                <RefreshCw
-                  className={`h-3 sm:h-4 w-3 sm:w-4 ${loading ? "animate-spin" : ""}`}
-                />
-              }
-              iconPosition="left"
               onClick={loadData}
               disabled={loading}
             >
+              <RefreshCw
+                className={`h-3 sm:h-4 w-3 sm:w-4 ${loading ? "animate-spin" : ""}`}
+              />
               <span className="hidden sm:inline">Refresh</span>
               <span className="sm:hidden">Ref</span>
             </Button>
             <Button
               variant="ghost"
               className="border border-gray-300 bg-white hover:bg-gray-50 text-xs sm:text-sm px-2 sm:px-4"
-              icon={<Download className="h-3 sm:h-4 w-3 sm:w-4" />}
-              iconPosition="left"
               onClick={exportExcel}
               disabled={loading}
             >
+              <Download className="h-3 sm:h-4 w-3 sm:w-4" />
               <span className="hidden sm:inline">Export Excel</span>
               <span className="sm:hidden">Export</span>
             </Button>
