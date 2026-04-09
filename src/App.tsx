@@ -17,6 +17,7 @@ import { TripleOtConfigPage } from "./pages/TripleOtConfig";
 import { DecisionReasonsPage } from "./pages/DecisionReasonsPage";
 import OtLogsPage from "./pages/OtLogsPage";
 import FingerPrintLogFormatter from "./pages/utils/LogsUploader";
+import { EmailCenterPage } from "./pages/EmailCenterPage";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { state } = useAuth();
@@ -92,6 +93,7 @@ export default function App() {
           path="/fingerprint/process"
           element={<FingerPrintLogFormatter />}
         />
+        <Route path="/email-center" element={<EmailCenterPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

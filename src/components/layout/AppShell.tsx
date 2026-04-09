@@ -22,6 +22,7 @@ import {
   Key,
   LogOut,
   Fingerprint,
+  Mail,
 } from "lucide-react";
 import { Menu } from "@/components/animate-ui/icons/menu";
 import { usePendingNotifications } from "../../hooks/usePendingNotifications";
@@ -385,6 +386,15 @@ export function AppShell() {
                           to="/fingerprint/process"
                           label="Fingerprint Logs Processing"
                           Icon={Fingerprint}
+                          mode={mode}
+                          onClick={() => setSettingsOpen(false)}
+                        />
+                      )}
+                      {has("email.send") && (
+                        <Item
+                          to="/email-center"
+                          label="Email Center"
+                          Icon={Mail}
                           mode={mode}
                           onClick={() => setSettingsOpen(false)}
                         />
