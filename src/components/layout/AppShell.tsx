@@ -30,6 +30,7 @@ import { api } from "../../api/client";
 import Loading from "../ui/Loading";
 import { formatMmSs } from "../../utils/getJwtExp";
 import { BellRing } from "../animate-ui/icons/bell-ring";
+import Logo from "../../assets/images/logo.png";
 
 type SidebarMode = "full" | "hidden";
 
@@ -209,16 +210,26 @@ export function AppShell() {
               <div className="flex items-center gap-3">
                 {mode === "full" ? (
                   <>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue to-blue-600 shadow-md">
-                      <span className="text-lg font-black text-white">OT</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
+                      <img
+                        src={Logo}
+                        alt="OTFlow logo"
+                        className="h-8 w-8 object-contain"
+                      />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-black tracking-tight text-gray-900">
-                        OT<span className="text-brand-blue">Flow</span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1 text-sm font-extrabold tracking-tight text-slate-900">
+                        <span>OT</span>
+                        <span className="text-brand-blue">Flow</span>
                       </div>
-                      <div className="flex items-center gap-2 truncate text-xs text-gray-600">
-                        <UserCircle className="h-3 w-3" />
-                        <span className="truncate font-medium">
+
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100">
+                          <UserCircle className="h-3.5 w-3.5 text-slate-600" />
+                        </div>
+
+                        <span className="truncate font-medium text-slate-700">
                           {state.user?.username}
                         </span>
                       </div>

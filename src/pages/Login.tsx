@@ -47,7 +47,7 @@ export function LoginPage() {
           <div className="w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm p-8 shadow-lg">
             {/* Logo Header */}
             <div className="mb-8 text-center">
-              <div className="mb-4 flex justify-center"></div>
+              <div className="mb-5 flex justify-center"></div>
               <div className="text-3xl font-black tracking-tight">
                 OT
                 <span className="bg-gradient-to-r from-brand-blue to-blue-600 bg-clip-text text-transparent">
