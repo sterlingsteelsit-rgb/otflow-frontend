@@ -28,5 +28,11 @@ export function makeCreateRow(): CreateRow {
     inTime: "",
     outTime: "",
     reason: "",
+
+    manualOverride: false,
+    normalHours: "0",
+    doubleHours: "0",
+    tripleHours: "0",
+    isNight: false,
   };
 }

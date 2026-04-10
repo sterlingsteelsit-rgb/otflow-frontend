@@ -36,6 +36,12 @@ export type CreateRow = {
   inTime: string;
   outTime: string;
   reason: string;
+
+  manualOverride: boolean;
+  normalHours: string;
+  doubleHours: string;
+  tripleHours: string;
+  isNight: boolean;
 };
 
 export type AuditRow = {

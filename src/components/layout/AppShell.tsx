@@ -29,6 +29,7 @@ import { usePendingNotifications } from "../../hooks/usePendingNotifications";
 import { Portal } from "./Portal";
 import { api } from "../../api/client";
 import Loading from "../ui/Loading";
+import { Modal } from "../ui/Modal";
 import { formatMmSs } from "../../utils/getJwtExp";
 import { BellRing } from "../animate-ui/icons/bell-ring";
 import Logo from "../../assets/images/logo.png";
@@ -145,6 +146,8 @@ export function AppShell() {
   const [count, setCount] = useState(0);
   const { remainingSec, expiresAt } = state;
   const expiryText = expiresAt ? new Date(expiresAt).toLocaleTimeString() : "";
+
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     async function loadCount() {
@@ -413,7 +416,7 @@ export function AppShell() {
                   "hover:from-red-100 hover:to-red-200/80 hover:text-red-700",
                   "border border-red-200 hover:border-red-300 hover:shadow-sm",
                 )}
-                onClick={() => logout("MANUAL")}
+                onClick={() => setLogoutOpen(true)}
               >
                 {mode === "full" && (
                   <>
@@ -626,6 +629,29 @@ export function AppShell() {
           </div>
         </main>
       </div>
+      <Modal title="Confirm Logout" open={logoutOpen} onClose={() => setLogoutOpen(false)}>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-600">
+            Are you sure you want to logout?
+          </p>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setLogoutOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              className="bg-red-500 text-white"
+              onClick={() => {
+                setLogoutOpen(false);
+                logout("MANUAL");
+              }}
+            >
+              Logout
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -572,6 +572,22 @@ export function OtEntryPage() {
           inTime: r.shift === "NO_SHIFT" ? "" : r.inTime,
           outTime: r.shift === "NO_SHIFT" ? "" : r.outTime,
           reason: r.reason?.trim() ? r.reason.trim() : undefined,
+
+          manualOverride: r.manualOverride,
+
+          normalMinutes: r.manualOverride
+            ? Math.round(Number(r.normalHours || 0) * 60)
+            : undefined,
+
+          doubleMinutes: r.manualOverride
+            ? Math.round(Number(r.doubleHours || 0) * 60)
+            : undefined,
+
+          tripleMinutes: r.manualOverride
+            ? Math.round(Number(r.tripleHours || 0) * 60)
+            : undefined,
+
+          isNight: r.manualOverride ? r.isNight : undefined,
         })),
       };
       const resp = await api.post("/ot/bulk", payload);

@@ -12,6 +12,12 @@ type CreateRow = {
   inTime: string;
   outTime: string;
   reason: string;
+
+  manualOverride: boolean;
+  normalHours: string;
+  doubleHours: string;
+  tripleHours: string;
+  isNight: boolean;
 };
 
 type EmployeeOption = {
@@ -149,6 +155,60 @@ function CreateOtRowComponent({
           <div className="text-xs text-gray-500">No shift selected</div>
         ) : (
           <div className="md:col-span-12">
+            <div className="md:col-span-12 mt-3 rounded-xl border border-gray-200 bg-gray-100 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={row.manualOverride}
+                  onChange={(e) =>
+                    onChangeRow(index, { manualOverride: e.target.checked })
+                  }
+                />
+                Manual Override
+              </label>
+
+              {row.manualOverride ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <Input
+                    label="Normal Hours"
+                    type="number"
+                    value={row.normalHours}
+                    onChange={(e) =>
+                      onChangeRow(index, { normalHours: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    label="Double Hours"
+                    type="number"
+                    value={row.doubleHours}
+                    onChange={(e) =>
+                      onChangeRow(index, { doubleHours: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    label="Triple Hours"
+                    type="number"
+                    value={row.tripleHours}
+                    onChange={(e) =>
+                      onChangeRow(index, { tripleHours: e.target.value })
+                    }
+                  />
+
+                  <label className="flex items-center gap-2 pt-6 text-sm font-medium text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={row.isNight}
+                      onChange={(e) =>
+                        onChangeRow(index, { isNight: e.target.checked })
+                      }
+                    />
+                    Night OT
+                  </label>
+                </div>
+              ) : null}
+            </div>
             <div className="rounded-lg border border-gray-200 bg-white/70 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs font-black text-gray-700">
