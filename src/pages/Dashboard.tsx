@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -88,7 +89,8 @@ function StatCard(props: {
 }) {
   const Icon = props.icon;
   return (
-    <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-all duration-200 hover:shadow-md">
+    <div className="stat-card rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/40">
+      {" "}
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -110,7 +112,6 @@ function StatCard(props: {
           </div>
         ) : null}
       </div>
-
       {props.footer ? (
         <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
           {props.footer}
@@ -149,6 +150,12 @@ export function DashboardPage() {
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const chartsRef = useRef<HTMLDivElement>(null);
+  const activityRef = useRef<HTMLDivElement>(null);
 
   async function loadDashboard() {
     if (!authReady) return;
@@ -263,6 +270,94 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, canEmployees, canUsers, canStats, canAudit]);
 
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      // Page fade
+      gsap.fromTo(
+        pageRef.current,
+        {
+          opacity: 0,
+        },
+        {
+          opacity: 1,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+      );
+
+      // Header slide
+      gsap.fromTo(
+        headerRef.current,
+        {
+          y: -20,
+          opacity: 0,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.7,
+          ease: "power3.out",
+        },
+      );
+
+      // KPI cards stagger
+      const cards = cardsRef.current?.querySelectorAll(".stat-card");
+
+      gsap.fromTo(
+        cards || [],
+        {
+          y: 30,
+          opacity: 0,
+          scale: 0.96,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          stagger: 0.1,
+          duration: 0.7,
+          ease: "back.out(1.4)",
+          delay: 0.15,
+        },
+      );
+
+      // Charts animation
+      gsap.fromTo(
+        chartsRef.current?.children || [],
+        {
+          opacity: 0,
+          y: 40,
+        },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.15,
+          duration: 0.9,
+          ease: "power4.out",
+          delay: 0.35,
+        },
+      );
+
+      // Activity section
+      gsap.fromTo(
+        activityRef.current,
+        {
+          opacity: 0,
+          y: 30,
+        },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "power3.out",
+          delay: 0.5,
+        },
+      );
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   const weekChartData = useMemo(() => {
     const map = new Map<string, DayStats>();
     for (const it of weekStats) map.set(it.date, it);
@@ -298,8 +393,12 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 border rounded-xl border-gray-200 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
+    <div ref={pageRef} className="space-y-6">
+      <div
+        ref={headerRef}
+        className="flex flex-wrap items-center justify-between gap-3 border rounded-xl border-gray-200 bg-white/80 backdrop-blur-sm p-4 shadow-sm"
+      >
+        {" "}
         <div>
           <div className="mt-1 text-sm text-gray-600">
             Week:{" "}
@@ -308,7 +407,6 @@ export function DashboardPage() {
             </span>
           </div>
         </div>
-
         <div className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2 py-1 shadow-sm">
           {loading && (
             <>
@@ -327,7 +425,10 @@ export function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div
+        ref={cardsRef}
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+      >
         <StatCard
           title="Employees"
           value={
@@ -397,8 +498,9 @@ export function DashboardPage() {
 
       {/* Charts */}
       {canStats ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
+        <div ref={chartsRef} className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {" "}
+          <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/30">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <div className="text-lg font-black text-gray-900">
@@ -442,8 +544,7 @@ export function DashboardPage() {
               </div>
             )}
           </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/30">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <div className="text-lg font-black text-gray-900">
@@ -503,7 +604,7 @@ export function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/30">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Charts are hidden (no{" "}
@@ -518,7 +619,11 @@ export function DashboardPage() {
       )}
 
       {/* Recent Activity */}
-      <div className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm">
+      <div
+        ref={activityRef}
+        className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-5 shadow-sm"
+      >
+        {" "}
         <div className="mb-4 flex items-center justify-between">
           <div>
             <div className="text-lg font-black text-gray-900">
@@ -532,14 +637,13 @@ export function DashboardPage() {
             {canAudit ? "audit.read" : "Hidden"}
           </div>
         </div>
-
         {canAudit ? (
           auditRows.length ? (
             <div className="space-y-3">
               {auditRows.map((a) => (
                 <div
                   key={a._id}
-                  className="rounded-lg border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-sm"
+                  className="rounded-lg border border-gray-200 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-gray-200/60"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
