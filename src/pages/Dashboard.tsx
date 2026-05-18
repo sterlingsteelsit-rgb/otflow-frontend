@@ -18,66 +18,13 @@ import {
 } from "recharts";
 import { RefreshCw, Users, User, Clock, Calendar } from "lucide-react";
 import Loading from "../components/ui/Loading";
-
-type DayStats = {
-  date: string; // YYYY-MM-DD
-  total: number;
-  pending: number;
-  approved: number;
-  rejected: number;
-  hours: { normal: number; double: number; triple: number };
-};
-
-type AuditRow = {
-  _id: string;
-  createdAt: string;
-  actorUserId?: { username?: string; email?: string } | null;
-  action: string;
-  entityType: string;
-  entityId: string;
-  meta?: Record<string, unknown>;
-};
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-function toYYYYMMDD(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-function addDays(date: Date, days: number) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-function startOfWeekMonday(today: Date) {
-  const d = new Date(today);
-  const day = d.getDay(); // 0 Sun .. 6 Sat
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function sumWeek(items: DayStats[]) {
-  return items.reduce(
-    (acc, it) => {
-      acc.total += it.total || 0;
-      acc.pending += it.pending || 0;
-      acc.approved += it.approved || 0;
-      acc.rejected += it.rejected || 0;
-      acc.hours.normal += it.hours?.normal || 0;
-      acc.hours.double += it.hours?.double || 0;
-      acc.hours.triple += it.hours?.triple || 0;
-      return acc;
-    },
-    {
-      total: 0,
-      pending: 0,
-      approved: 0,
-      rejected: 0,
-      hours: { normal: 0, double: 0, triple: 0 },
-    },
-  );
-}
+import type { DayStats, AuditRow } from "../types/dashboard.types";
+import {
+  toYYYYMMDD,
+  addDays,
+  startOfWeekMonday,
+  sumWeek,
+} from "../utils/dashboard.func";
 
 function StatCard(props: {
   title: string;
@@ -169,11 +116,11 @@ export function DashboardPage() {
     setLoading(true);
     try {
       const next = {
-        employeesTotal: employeesTotal,
-        usersTotal: usersTotal,
-        todayStats: todayStats,
-        weekStats: weekStats,
-        auditRows: auditRows,
+        employeesTotal: null as number | null,
+        usersTotal: null as number | null,
+        todayStats: null as DayStats | null,
+        weekStats: [] as DayStats[],
+        auditRows: [] as AuditRow[],
       };
 
       const jobs: Promise<any>[] = [];
@@ -251,11 +198,11 @@ export function DashboardPage() {
           }),
         ),
       );
-      setEmployeesTotal(next.employeesTotal ?? null);
-      setUsersTotal(next.usersTotal ?? null);
-      setTodayStats(next.todayStats ?? null);
-      setWeekStats(next.weekStats ?? []);
-      setAuditRows(next.auditRows ?? []);
+      setEmployeesTotal(next.employeesTotal);
+      setUsersTotal(next.usersTotal);
+      setTodayStats(next.todayStats);
+      setWeekStats(next.weekStats);
+      setAuditRows(next.auditRows);
     } finally {
       setLoading(false);
     }
@@ -358,14 +305,15 @@ export function DashboardPage() {
     return () => ctx.revert();
   }, []);
 
-  const weekChartData = useMemo(() => {
-    const map = new Map<string, DayStats>();
-    for (const it of weekStats) map.set(it.date, it);
+  const weekMap = useMemo(() => {
+    return new Map(weekStats.map((i) => [i.date, i]));
+  }, [weekStats]);
 
+  const weekChartData = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const dateObj = addDays(weekStart, i);
       const d = toYYYYMMDD(dateObj);
-      const it = map.get(d);
+      const it = weekMap.get(d);
 
       return {
         date: d,
@@ -379,7 +327,7 @@ export function DashboardPage() {
         triple: it?.hours?.triple ?? 0,
       };
     });
-  }, [weekStats, weekStart]);
+  }, [weekStart, weekMap]);
 
   const axisTick = useMemo(() => ({ fill: "#6b7280" }), []);
   const tooltipStyle = useMemo(

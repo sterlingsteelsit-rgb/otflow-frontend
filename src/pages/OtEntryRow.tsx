@@ -9,27 +9,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import type { OtRow } from "../utils/otTypes";
-
-function minutesToOt(min: number) {
-  const h = Math.round((min / 60) * 100) / 100;
-  const s = String(h).replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
-  return `${s}`;
-}
-
-type Props = {
-  item: OtRow;
-  canApprove: boolean;
-  canReject: boolean;
-  canReadAudit: boolean;
-  canUpdate: boolean;
-  onApprove: (row: OtRow) => void;
-  onReject: (row: OtRow) => void;
-  onEdit: (row: OtRow) => void;
-  onAudit: (row: OtRow) => void;
-  isSelected?: boolean;
-  onToggleSelect?: () => void;
-};
+import type { Props } from "../types/otentryrow.types";
+import { minutesToOt } from "../utils/minToOt";
 
 function OtEntryRowComponent({
   item,
@@ -72,7 +53,7 @@ function OtEntryRowComponent({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={onToggleSelect}
+            onChange={() => onToggleSelect(item._id)}
           />
         ) : null}
       </td>
