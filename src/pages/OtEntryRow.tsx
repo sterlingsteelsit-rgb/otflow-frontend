@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   User,
   Moon,
@@ -34,13 +34,27 @@ function OtEntryRowComponent({
           ? "8:30AM"
           : item.shift || "";
 
-  const n = minutesToOt(item.normalMinutes);
-  const d = minutesToOt(item.doubleMinutes);
-  const t = minutesToOt(item.tripleMinutes);
-  const total = minutesToOt(
-    item.normalMinutes + item.doubleMinutes + item.tripleMinutes,
+  const n = useMemo(
+    () => minutesToOt(item.normalMinutes),
+    [item.normalMinutes],
   );
-  const approved = minutesToOt(item.approvedTotalMinutes ?? 0);
+  const d = useMemo(
+    () => minutesToOt(item.doubleMinutes),
+    [item.doubleMinutes],
+  );
+  const t = useMemo(
+    () => minutesToOt(item.tripleMinutes),
+    [item.tripleMinutes],
+  );
+  const total = useMemo(
+    () =>
+      minutesToOt(item.normalMinutes + item.doubleMinutes + item.tripleMinutes),
+    [item.normalMinutes, item.doubleMinutes, item.tripleMinutes],
+  );
+  const approved = useMemo(
+    () => minutesToOt(item.approvedTotalMinutes ?? 0),
+    [item.approvedTotalMinutes],
+  );
 
   const dimN = n === "0";
   const dimD = d === "0";
@@ -237,4 +251,18 @@ function OtEntryRowComponent({
   );
 }
 
-export const OtEntryRow = React.memo(OtEntryRowComponent);
+export const OtEntryRow = React.memo(OtEntryRowComponent, (prev, next) => {
+  return (
+    prev.item._id === next.item._id &&
+    prev.item.status === next.item.status &&
+    prev.item.normalMinutes === next.item.normalMinutes &&
+    prev.item.doubleMinutes === next.item.doubleMinutes &&
+    prev.item.tripleMinutes === next.item.tripleMinutes &&
+    prev.item.approvedTotalMinutes === next.item.approvedTotalMinutes &&
+    prev.isSelected === next.isSelected &&
+    prev.canApprove === next.canApprove &&
+    prev.canReject === next.canReject &&
+    prev.canUpdate === next.canUpdate &&
+    prev.canReadAudit === next.canReadAudit
+  );
+});

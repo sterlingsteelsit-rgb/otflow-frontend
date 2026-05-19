@@ -1,54 +1,10 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { SelectField } from "../components/ui/SelectField";
 import { calcOtMinutesUI, minsToHours } from "../utils/otCalcPreview";
-
-type CreateRow = {
-  id: string;
-  employeeId: string;
-  shift: string;
-  inTime: string;
-  outTime: string;
-  reason: string;
-
-  manualOverride: boolean;
-  normalHours: string;
-  doubleHours: string;
-  tripleHours: string;
-  isNight: boolean;
-};
-
-type EmployeeOption = {
-  label: string;
-  value: string;
-  disabled?: boolean;
-};
-
-type ShiftOption = {
-  label: string;
-  value: string;
-};
-
-type Preview = {
-  normalMinutes: number;
-  doubleMinutes: number;
-  tripleMinutes: number;
-  isNight: boolean;
-};
-
-type Props = {
-  index: number;
-  row: CreateRow;
-  selectedDate: string;
-  isTripleDay: boolean;
-  employeeOptions: EmployeeOption[];
-  shiftOptions: ShiftOption[];
-  canRemove: boolean;
-  onChangeRow: (index: number, patch: Partial<CreateRow>) => void;
-  onRemoveRow: (index: number) => void;
-};
+import type { Props } from "../types/createOtRow.types";
 
 function CreateOtRowComponent({
   index,
@@ -63,28 +19,39 @@ function CreateOtRowComponent({
 }: Props) {
   const isNoShift = row.shift === "NO_SHIFT";
 
-  const preview: Preview = useMemo(() => {
-    if (isNoShift) {
+  const [debouncedInTime, setDebouncedInTime] = useState(row.inTime);
+  const [debouncedOutTime, setDebouncedOutTime] = useState(row.outTime);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedInTime(row.inTime), 150);
+    return () => clearTimeout(id);
+  }, [row.inTime]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedOutTime(row.outTime), 150);
+    return () => clearTimeout(id);
+  }, [row.outTime]);
+
+  const preview = useMemo(() => {
+    if (isNoShift)
       return {
         normalMinutes: 0,
         doubleMinutes: 0,
         tripleMinutes: 0,
         isNight: false,
       };
-    }
-
     return calcOtMinutesUI({
       workDate: selectedDate,
       shift: row.shift,
-      inTime: row.inTime,
-      outTime: row.outTime,
+      inTime: debouncedInTime,
+      outTime: debouncedOutTime,
       isTripleDay,
     });
   }, [
     isNoShift,
     row.shift,
-    row.inTime,
-    row.outTime,
+    debouncedInTime,
+    debouncedOutTime,
     selectedDate,
     isTripleDay,
   ]);

@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import React from "react";
 
 type DayStats = {
   date: string;
@@ -30,7 +31,7 @@ interface StatsModalProps {
   statsLoading: boolean;
 }
 
-export default function StatsModal({
+const StatsModal = React.memo(function StatsModal({
   stats,
   statsOpen,
   setStatsOpen,
@@ -386,4 +387,6 @@ export default function StatsModal({
       </div>
     </Modal>
   );
-}
+});
+
+export default StatsModal;

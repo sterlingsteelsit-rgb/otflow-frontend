@@ -62,12 +62,12 @@ export function Modal({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="sync">
       {open && (
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/20"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -90,8 +90,7 @@ export function Modal({
                 typeof title === "string" ? "modal-title" : undefined
               }
               className={cn(
-                "relative w-full flex flex-col",
-                "bg-white rounded-2xl shadow-2xl",
+                "relative w-full flex flex-col bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl",
                 "max-h-[85vh]",
                 sizeClasses[size],
                 className,
@@ -108,18 +107,15 @@ export function Modal({
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-                <motion.h3
+                <h3
                   id="modal-title"
                   className="text-xl font-semibold text-gray-900 tracking-tight"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.05, duration: 0.2 }}
                 >
                   {title}
-                </motion.h3>
+                </h3>
 
                 {showCloseButton && (
-                  <motion.button
+                  <button
                     type="button"
                     onClick={onClose}
                     aria-label="Close modal"
@@ -130,11 +126,6 @@ export function Modal({
                       "focus:outline-none focus:ring-2 focus:ring-gray-200",
                       "active:scale-95",
                     )}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1, duration: 0.2 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
                   >
                     <svg
                       className="w-4 h-4"
@@ -149,19 +140,12 @@ export function Modal({
                         d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
-                  </motion.button>
+                  </button>
                 )}
               </div>
 
               {/* Body */}
-              <motion.div
-                className="flex-1 overflow-y-auto px-6 py-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.2 }}
-              >
-                {children}
-              </motion.div>
+              <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
             </motion.div>
           </motion.div>
         </>
