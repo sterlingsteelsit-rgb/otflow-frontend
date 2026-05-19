@@ -32,6 +32,11 @@ function CreateOtRowComponent({
     return () => clearTimeout(id);
   }, [row.outTime]);
 
+  useEffect(() => {
+    setDebouncedInTime(row.inTime);
+    setDebouncedOutTime(row.outTime);
+  }, [row.id]);
+
   const preview = useMemo(() => {
     if (isNoShift)
       return {

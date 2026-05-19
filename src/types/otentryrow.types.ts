@@ -13,3 +13,9 @@ export type Props = {
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
 };
+
+export const SHIFT_LABELS: Record<string, string> = {
+  NO_SHIFT: "No Shift",
+  "Shift 1": "6:30AM",
+  "Shift 2": "8:30AM",
+};

@@ -9,7 +9,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import type { Props } from "../types/otentryrow.types";
+import { SHIFT_LABELS, type Props } from "../types/otentryrow.types";
 import { minutesToOt } from "../utils/minToOt";
 
 function OtEntryRowComponent({
@@ -25,14 +25,7 @@ function OtEntryRowComponent({
   isSelected = false,
   onToggleSelect = () => {},
 }: Props) {
-  const shiftLabel =
-    item.shift === "NO_SHIFT"
-      ? "No Shift"
-      : item.shift === "Shift 1"
-        ? "6:30AM"
-        : item.shift === "Shift 2"
-          ? "8:30AM"
-          : item.shift || "";
+  const shiftLabel = SHIFT_LABELS[item.shift] ?? item.shift ?? "";
 
   const n = useMemo(
     () => minutesToOt(item.normalMinutes),
@@ -259,6 +252,10 @@ export const OtEntryRow = React.memo(OtEntryRowComponent, (prev, next) => {
     prev.item.doubleMinutes === next.item.doubleMinutes &&
     prev.item.tripleMinutes === next.item.tripleMinutes &&
     prev.item.approvedTotalMinutes === next.item.approvedTotalMinutes &&
+    prev.item.inTime === next.item.inTime &&
+    prev.item.outTime === next.item.outTime &&
+    prev.item.isNight === next.item.isNight &&
+    prev.item.shift === next.item.shift &&
     prev.isSelected === next.isSelected &&
     prev.canApprove === next.canApprove &&
     prev.canReject === next.canReject &&
